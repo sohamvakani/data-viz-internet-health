@@ -1,26 +1,32 @@
 // Internet Access vs Life Expectancy Visualization
-d3.csv("data/merged-data.csv").then((data) => {
-  // converting strings to numbers and filtering out "World" since we want country only data
-  data = data
-    .filter((d) => d.Country !== "World")
-    .map((d) => ({
-      country: d.Country,
-      code: d.Code,
-      internet: +d.InternetAccess,
-      life: +d.LifeExpectancy,
-    }))
-    .filter((d) => !isNaN(d.internet) && !isNaN(d.life));
 
-  console.log("After filtering World:", data.length, "countries");
-  console.log(
-    "World data:",
-    data.filter((d) => d.country.includes("World")),
-  );
+//load geojson map data
+const geojsonUrl =
+  "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson";
 
-  //creating visualizations
-  createHistogramInternet(data);
-  createHistogramLife(data);
-  createScatterplot(data);
+d3.json(geojsonUrl).then((geoData) => {
+  // Loading country data
+  d3.csv("data/merged-data.csv").then((data) => {
+    // Processing data to convert strings to numbers and remove World
+    data = data
+      .filter((d) => d.Country !== "World")
+      .map((d) => ({
+        country: d.Country,
+        code: d.Code,
+        internet: +d.InternetAccess,
+        life: +d.LifeExpectancy,
+      }))
+      .filter((d) => !isNaN(d.internet) && !isNaN(d.life));
+
+    console.log("Data loaded:", data.length, "countries");
+
+    // Create visualizations
+    createChoroplethInternet(geoData, data);
+    createChoroplethLife(geoData, data);
+    createHistogramInternet(data);
+    createHistogramLife(data);
+    createScatterplot(data);
+  });
 });
 
 function createHistogramInternet(data) {
