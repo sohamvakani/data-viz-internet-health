@@ -26,6 +26,16 @@ header h1 {
 header p {
   color: #666;
   font-size: 0.95rem;
+  margin: 0.3rem 0;
+}
+
+header a {
+  color: #0066cc;
+  text-decoration: none;
+}
+
+header a:hover {
+  text-decoration: underline;
 }
 
 main {
@@ -36,11 +46,10 @@ main {
 
 #visualizations {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 2rem;
 }
 
-/* Placeholder for visualization containers */
 .chart-container {
   background: white;
   padding: 1.5rem;
@@ -48,8 +57,40 @@ main {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.chart-container.full-width {
+  grid-column: 1 / -1;
+}
+
 .chart-container h2 {
   font-size: 1.2rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   color: #333;
+}
+
+/* D3 Styles */
+.bar {
+  fill: steelblue;
+}
+
+.bar:hover {
+  fill: darkblue;
+}
+
+.dot {
+  fill: steelblue;
+  opacity: 0.6;
+}
+
+.dot:hover {
+  fill: darkblue;
+  opacity: 1;
+}
+
+.axis-label {
+  font-size: 0.9rem;
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: bold;
 }
