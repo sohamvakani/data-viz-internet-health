@@ -44,6 +44,7 @@ main {
   padding: 0 2rem 2rem;
 }
 
+/* Grid Level 1 visualizations with 2 equal width columns and some spacing between the charts*/
 #visualizations {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
