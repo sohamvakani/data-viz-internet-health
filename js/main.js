@@ -34,6 +34,21 @@ const attributeConfigs = {
     format: ".2f",
   },
 };
+//creating a tooltip
+const tooltip = d3
+  .select("body")
+  .append("div")
+  .attr("class", "tooltip")
+  .style("position", "absolute")
+  .style("padding", "8px")
+  .style("background", "rgba(0, 0, 0, 0.8)")
+  .style("color", "white")
+  .style("border-radius", "4px")
+  .style("pointer-events", "none")
+  .style("font-size", "0.85rem")
+  .style("z-index", "1000")
+  .style("display", "none");
+
 // Function to bin healthcare spending
 function getHealthcareSpendingBin(value) {
   if (value < 50) return "$0-$50";
@@ -293,6 +308,7 @@ function createHistogram(data, attributeName, containerId) {
     .range([height, 0]);
 
   // Draw bars
+  // Draw bars
   svg
     .selectAll(".bar")
     .data(bins)
@@ -302,8 +318,28 @@ function createHistogram(data, attributeName, containerId) {
     .attr("x", (d) => xScale(d.x0) + 1)
     .attr("width", (d) => xScale(d.x1) - xScale(d.x0) - 1)
     .attr("y", (d) => yScale(d.length))
-    .attr("height", (d) => height - yScale(d.length));
+    .attr("height", (d) => height - yScale(d.length))
+    .on("mouseover", function (event, d) {
+      d3.select(this).style("fill", "darkblue");
 
+      // Show tooltip
+      tooltip
+        .style("display", "block")
+        .style("left", event.pageX + 10 + "px")
+        .style("top", event.pageY - 10 + "px")
+        .html(
+          `<strong>${config.label}</strong><br/>Range: ${d.x0.toFixed(1)} - ${d.x1.toFixed(1)}<br/>Countries: ${d.length}`,
+        );
+    })
+    .on("mousemove", function (event) {
+      tooltip
+        .style("left", event.pageX + 10 + "px")
+        .style("top", event.pageY - 10 + "px");
+    })
+    .on("mouseout", function () {
+      d3.select(this).style("fill", "steelblue");
+      tooltip.style("display", "none");
+    });
   // X axis
   svg
     .append("g")
@@ -367,6 +403,7 @@ function createScatterplot(data, attribute1Name, attribute2Name) {
     .range([height, 0]);
 
   // Draw dots
+  // Draw dots
   svg
     .selectAll(".dot")
     .data(data)
@@ -375,8 +412,28 @@ function createScatterplot(data, attribute1Name, attribute2Name) {
     .attr("class", "dot")
     .attr("cx", (d) => xScale(d[attribute1Name]))
     .attr("cy", (d) => yScale(d[attribute2Name]))
-    .attr("r", 5);
+    .attr("r", 5)
+    .on("mouseover", function (event, d) {
+      d3.select(this).style("fill", "darkblue").style("opacity", "1");
 
+      // Show tooltip
+      tooltip
+        .style("display", "block")
+        .style("left", event.pageX + 10 + "px")
+        .style("top", event.pageY - 10 + "px")
+        .html(
+          `<strong>${d.country}</strong><br/>${config1.label}: ${d[attribute1Name].toFixed(2)}<br/>${config2.label}: ${d[attribute2Name].toFixed(2)}`,
+        );
+    })
+    .on("mousemove", function (event) {
+      tooltip
+        .style("left", event.pageX + 10 + "px")
+        .style("top", event.pageY - 10 + "px");
+    })
+    .on("mouseout", function () {
+      d3.select(this).style("fill", "steelblue").style("opacity", "0.6");
+      tooltip.style("display", "none");
+    });
   // X axis
   svg
     .append("g")
@@ -567,9 +624,36 @@ function createChoropleth(geoData, data, attributeName, containerId) {
       const value = dataLookup[countryName];
 
       d3.select(this).style("stroke", "#333").style("stroke-width", "1.5px");
+
+      //show tooltip
+      if (value != undefined) {
+        tooltip
+          .style("display", "block")
+          .style("left", event.pageX + 10 + "px")
+          .style("top", event.pageY - 10 + "px")
+          .html(
+            `<strong>${countryName}</strong><br/>${config.label}: ${value.toFixed(2)}`,
+          );
+      } else {
+        // Show tooltip for no-data countries
+        tooltip
+          .style("display", "block")
+          .style("left", event.pageX + 10 + "px")
+          .style("top", event.pageY - 10 + "px")
+          .html(`<strong>${countryName}</strong><br/>No data available`);
+      }
+    })
+    .on("mousemove", function (event) {
+      // Update tooltip position as mouse moves
+      tooltip
+        .style("left", event.pageX + 10 + "px")
+        .style("top", event.pageY - 10 + "px");
     })
     .on("mouseout", function () {
       d3.select(this).style("stroke", "#fff").style("stroke-width", "0.5px");
+
+      // Hide tooltip
+      tooltip.style("display", "none");
     });
 
   // Add legend
