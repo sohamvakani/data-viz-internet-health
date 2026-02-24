@@ -59,7 +59,7 @@ main {
 }
 
 .chart-container.full-width {
-  padding: 0.25rem;
+  grid-column: 1 / -1;
 }
 
 .chart-container h2 {
@@ -196,12 +196,8 @@ main {
 .button-group label:hover {
   color: #0066cc;
 }
-#scatterplot {
-  display: flex;
-  justify-content: center;
-}
-
 #scatterplot svg {
-  max-width: 100%;
+  width: 100%;
   height: auto;
+  display: block;
 }
