@@ -376,7 +376,6 @@ function createHistogram(data, attributeName, containerId) {
     .domain([0, d3.max(bins, (d) => d.length)])
     .range([height, 0]);
 
- -
   const brush = d3
     .brushX()
     .extent([
@@ -501,7 +500,6 @@ function createScatterplot(data, attribute1Name, attribute2Name) {
     .scaleLinear()
     .domain([config2.min, config2.max])
     .range([height, 0]);
-
 
   const brush = d3
     .brush()
@@ -634,47 +632,6 @@ function createChoropleth(geoData, data, attributeName, containerId) {
     dataLookup[d.country] = d[attributeName];
   });
 
-  // Country name mapping for mismatches
-  // const countryNameMap = {
-  //   Antarctica: "Antarctica",
-  //   "French Southern and Antarctic Lands": "French Guiana",
-  //   "The Bahamas": "Bahamas",
-  //   "Central African Republic": "Central African Republic",
-  //   "Ivory Coast": "Côte d'Ivoire",
-  //   "Democratic Republic of the Congo": "Democratic Republic of Congo",
-  //   "Republic of the Congo": "Congo",
-  //   "Northern Cyprus": "Cyprus",
-  //   "Czech Republic": "Czechia",
-  //   Ethiopia: "Ethiopia",
-  //   "Falkland Islands": "Falkland Islands",
-  //   England: "United Kingdom",
-  //   "Guinea Bissau": "Guinea-Bissau",
-  //   Greenland: "Greenland",
-  //   Haiti: "Haiti",
-  //   India: "India",
-  //   Kosovo: "Kosovo",
-  //   Macedonia: "North Macedonia",
-  //   "New Caledonia": "New Caledonia",
-  //   "Puerto Rico": "Puerto Rico",
-  //   "North Korea": "North Korea",
-  //   "Western Sahara": "Western Sahara",
-  //   Sudan: "Sudan",
-  //   "South Sudan": "South Sudan",
-  //   Somaliland: "Somalia",
-  //   Somalia: "Somalia",
-  //   "Republic of Serbia": "Serbia",
-  //   Swaziland: "Eswatini",
-  //   Syria: "Syria",
-  //   Turkmenistan: "Turkmenistan",
-  //   Taiwan: "Taiwan",
-  //   "United Republic of Tanzania": "Tanzania",
-  //   USA: "United States",
-  //   Venezuela: "Venezuela",
-  //   "West Bank": "Palestine",
-  //   Yemen: "Yemen",
-  // };
-
-  // Clear container
   d3.select(containerId).html("");
 
   const margin = { top: 20, right: 20, bottom: 80, left: 20 };
@@ -718,6 +675,50 @@ function createChoropleth(geoData, data, attributeName, containerId) {
     return feature.properties.name !== "Antarctica";
   });
 
+  const brush = d3
+    .brush()
+    .extent([
+      [0, 0],
+      [width, height],
+    ])
+    .on("start brush end", brushed);
+
+  svg.append("g").attr("class", "brush").call(brush);
+
+  function brushed({ selection }) {
+    if (!selection) {
+      selectedCountries.clear();
+      updateHighlighting();
+      return;
+    }
+
+    const [[x0, y0], [x1, y1]] = selection;
+    selectedCountries.clear();
+
+    // Check which countries fall inside the brush box
+    svg.selectAll(".country").each(function (d) {
+      // Find the [x, y] center point of the country path
+      const centroid = path.centroid(d);
+
+      // Make sure the centroid is valid (some maps have missing geometry data)
+      if (!isNaN(centroid[0])) {
+        const cx = centroid[0];
+        const cy = centroid[1];
+
+        // If the country's center is inside the brush box
+        if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
+          let countryName = d.properties.name;
+          // Apply mapping if the name doesn't match our dataset
+          if (countryNameMap[countryName]) {
+            countryName = countryNameMap[countryName];
+          }
+          selectedCountries.add(countryName);
+        }
+      }
+    });
+
+    updateHighlighting();
+  }
   // Draw countries
   svg
     .selectAll(".country")
