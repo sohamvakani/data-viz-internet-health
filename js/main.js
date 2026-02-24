@@ -58,6 +58,41 @@ function getInfantMortalityBin(value) {
   return "10%+";
 }
 
+// Function to bin life expectancy
+function getLifeExpectancyBin(value) {
+  if (value < 55) return "50-55";
+  if (value < 60) return "55-60";
+  if (value < 65) return "60-65";
+  if (value < 70) return "65-70";
+  if (value < 75) return "70-75";
+  if (value < 80) return "75-80";
+  if (value < 85) return "80-85";
+  return "85-90";
+}
+
+// Ordinal color scale for life expectancy (same as healthcare spending)
+const lifeExpectancyColorScale = d3
+  .scaleOrdinal()
+  .domain([
+    "50-55",
+    "55-60",
+    "60-65",
+    "65-70",
+    "70-75",
+    "75-80",
+    "80-85",
+    "85-90",
+  ])
+  .range([
+    "#ffffd9",
+    "#edf8b1",
+    "#c7e9b4",
+    "#7fcdbb",
+    "#41b6c4",
+    "#1d91c0",
+    "#225ea8",
+    "#0c2c84",
+  ]);
 // Ordinal color scales
 const healthcareColorScale = d3
   .scaleOrdinal()
@@ -144,6 +179,12 @@ d3.json(geojsonUrl).then((geoData) => {
         document.querySelector(
           "#visualizations .chart-container:first-child h2",
         ).textContent = attributeConfigs[attr1].label + " Distribution";
+        document.querySelector(
+          "#visualizations .chart-container.full-width h2",
+        ).textContent =
+          attributeConfigs[attr1].label +
+          " vs " +
+          attributeConfigs[attr2].label;
 
         // Clear and redraw
         d3.select("#histogram-internet").html("");
@@ -302,7 +343,7 @@ function createScatterplot(data, attribute1Name, attribute2Name) {
   // Clear the container first
   d3.select("#scatterplot").html("");
 
-  const margin = { top: 20, right: 20, bottom: 50, left: 60 };
+  const margin = { top: 20, right: 20, bottom: 50, left: 100 };
   const width = 1300 - margin.left - margin.right;
   const height = 400 - margin.top - margin.bottom;
 
@@ -349,14 +390,16 @@ function createScatterplot(data, attribute1Name, attribute2Name) {
     .text(config1.label);
 
   // Y axis
+  // Y axis
   svg
     .append("g")
     .call(d3.axisLeft(yScale))
     .append("text")
     .attr("class", "axis-label")
     .attr("transform", "rotate(-90)")
-    .attr("y", -50)
+    .attr("y", -80) // Changed from -50 to -80
     .attr("x", -height / 2)
+    .attr("text-anchor", "middle") // Add this
     .attr("fill", "black")
     .text(config2.label);
 }
@@ -379,6 +422,9 @@ function createChoropleth(geoData, data, attributeName, containerId) {
   } else if (attributeName === "InfantMortality") {
     colorScale = infantMortalityColorScale;
     getBinFunction = getInfantMortalityBin;
+  } else if (attributeName === "LifeExpectancy") {
+    colorScale = lifeExpectancyColorScale;
+    getBinFunction = getLifeExpectancyBin;
   } else {
     // Default sequential scale for other attributes
     const minValue = d3.min(data, (d) => d[attributeName]);
