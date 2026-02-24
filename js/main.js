@@ -308,6 +308,7 @@ function createHistogram(data, attributeName, containerId) {
     .range([height, 0]);
 
   // Draw bars
+  // Draw bars
   svg
     .selectAll(".bar")
     .data(bins)
@@ -317,8 +318,28 @@ function createHistogram(data, attributeName, containerId) {
     .attr("x", (d) => xScale(d.x0) + 1)
     .attr("width", (d) => xScale(d.x1) - xScale(d.x0) - 1)
     .attr("y", (d) => yScale(d.length))
-    .attr("height", (d) => height - yScale(d.length));
+    .attr("height", (d) => height - yScale(d.length))
+    .on("mouseover", function (event, d) {
+      d3.select(this).style("fill", "darkblue");
 
+      // Show tooltip
+      tooltip
+        .style("display", "block")
+        .style("left", event.pageX + 10 + "px")
+        .style("top", event.pageY - 10 + "px")
+        .html(
+          `<strong>${config.label}</strong><br/>Range: ${d.x0.toFixed(1)} - ${d.x1.toFixed(1)}<br/>Countries: ${d.length}`,
+        );
+    })
+    .on("mousemove", function (event) {
+      tooltip
+        .style("left", event.pageX + 10 + "px")
+        .style("top", event.pageY - 10 + "px");
+    })
+    .on("mouseout", function () {
+      d3.select(this).style("fill", "steelblue");
+      tooltip.style("display", "none");
+    });
   // X axis
   svg
     .append("g")
@@ -382,6 +403,7 @@ function createScatterplot(data, attribute1Name, attribute2Name) {
     .range([height, 0]);
 
   // Draw dots
+  // Draw dots
   svg
     .selectAll(".dot")
     .data(data)
@@ -390,8 +412,28 @@ function createScatterplot(data, attribute1Name, attribute2Name) {
     .attr("class", "dot")
     .attr("cx", (d) => xScale(d[attribute1Name]))
     .attr("cy", (d) => yScale(d[attribute2Name]))
-    .attr("r", 5);
+    .attr("r", 5)
+    .on("mouseover", function (event, d) {
+      d3.select(this).style("fill", "darkblue").style("opacity", "1");
 
+      // Show tooltip
+      tooltip
+        .style("display", "block")
+        .style("left", event.pageX + 10 + "px")
+        .style("top", event.pageY - 10 + "px")
+        .html(
+          `<strong>${d.country}</strong><br/>${config1.label}: ${d[attribute1Name].toFixed(2)}<br/>${config2.label}: ${d[attribute2Name].toFixed(2)}`,
+        );
+    })
+    .on("mousemove", function (event) {
+      tooltip
+        .style("left", event.pageX + 10 + "px")
+        .style("top", event.pageY - 10 + "px");
+    })
+    .on("mouseout", function () {
+      d3.select(this).style("fill", "steelblue").style("opacity", "0.6");
+      tooltip.style("display", "none");
+    });
   // X axis
   svg
     .append("g")
