@@ -20,7 +20,6 @@ d3.json(geojsonUrl).then((geoData) => {
     console.log("Data loaded:", data.length, "countries");
 
     // DEBUG: Find mismatches
-    const unmatched = debugCountryMatches(geoData, data);
 
     // Create visualizations
     createChoroplethInternet(geoData, data);
@@ -28,6 +27,7 @@ d3.json(geojsonUrl).then((geoData) => {
     createHistogramInternet(data);
     createHistogramLife(data);
     createScatterplot(data);
+    const unmatched = debugCountryMatches(geoData, data);
   });
 });
 
@@ -253,23 +253,47 @@ function createChoroplethInternet(geoData, data) {
 
   // Create a country name mapping for mismatches
   const countryNameMap = {
-    "United States of America": "United States",
-    Korea: "South Korea",
+    Antarctica: "Antarctica",
+    "French Southern and Antarctic Lands": "French Guiana",
+    "The Bahamas": "Bahamas",
+    "Central African Republic": "Central African Republic",
+    "Ivory Coast": "Côte d'Ivoire",
     "Democratic Republic of the Congo": "Democratic Republic of Congo",
     "Republic of the Congo": "Congo",
-    Czechia: "Czech Republic",
-    Palestine: "Palestine",
-    Tanzania: "Tanzania",
-    "Bosnia and Herzegovina": "Bosnia and Herzegovina",
-    "Micronesia (Federated States of)": "Micronesia",
-    Kyrgyzstan: "Kyrgyzstan",
+    "Northern Cyprus": "Cyprus",
+    "Czech Republic": "Czechia",
+    Ethiopia: "Ethiopia",
+    "Falkland Islands": "Falkland Islands",
+    England: "United Kingdom",
+    "Guinea Bissau": "Guinea-Bissau",
+    Greenland: "Greenland",
+    Haiti: "Haiti",
+    India: "India",
+    Kosovo: "Kosovo",
+    Macedonia: "North Macedonia",
+    "New Caledonia": "New Caledonia",
+    "Puerto Rico": "Puerto Rico",
+    "North Korea": "North Korea",
+    "Western Sahara": "Western Sahara",
+    Sudan: "Sudan",
+    "South Sudan": "South Sudan",
+    Somaliland: "Somalia",
+    Somalia: "Somalia",
+    "Republic of Serbia": "Serbia",
+    Swaziland: "Eswatini",
+    Syria: "Syria",
     Turkmenistan: "Turkmenistan",
-    "Timor-Leste": "East Timor",
+    Taiwan: "Taiwan",
+    "United Republic of Tanzania": "Tanzania",
+    USA: "United States",
+    Venezuela: "Venezuela",
+    "West Bank": "Palestine",
+    Yemen: "Yemen",
   };
 
   const margin = { top: 20, right: 20, bottom: 20, left: 20 };
-  const width = 600 - margin.left - margin.right;
-  const height = 400 - margin.top - margin.bottom;
+  const width = 650 - margin.left - margin.right;
+  const height = 450 - margin.top - margin.bottom;
 
   const svg = d3
     .select("#map-internet")
@@ -279,6 +303,17 @@ function createChoroplethInternet(geoData, data) {
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
+  const defs = svg.append("defs");
+  defs
+    .append("pattern")
+    .attr("id", "diagonal-hatch")
+    .attr("patternUnits", "userSpaceOnUse")
+    .attr("width", 5)
+    .attr("height", 5)
+    .append("path")
+    .attr("d", "M-1,1 l2,-2 M1,3 l2,-2 M3,5 l2,-2 M5,7 l2,-2")
+    .attr("stroke", "#999")
+    .attr("stroke-width", 0.3);
   // Create projection and path
   const projection = d3.geoMercator().fitSize([width, height], geoData);
 
@@ -287,28 +322,28 @@ function createChoroplethInternet(geoData, data) {
   // Get min and max values for color scale
   const minInternet = d3.min(data, (d) => d.internet);
   const maxInternet = d3.max(data, (d) => d.internet);
-  const midInternet = (minInternet + maxInternet) / 2;
 
-  // Create diverging color scale (red-white-blue)
+  // Create sequential color scale (white to dark blue)
   const colorScale = d3
     .scaleLinear()
-    .domain([minInternet, midInternet, maxInternet])
-    .range(["#d73027", "#ffffff", "#4575b4"])
+    .domain([minInternet, maxInternet])
+    .range(["#ffffff", "#08519c"]) // White to dark blue
     .clamp(true);
 
-  // Draw countries
+  // Filter out Antarctica
+  const countriesForMap = geoData.features.filter((feature) => {
+    return feature.properties.name !== "Antarctica";
+  });
   svg
     .selectAll(".country")
-    .data(geoData.features)
+    .data(countriesForMap)
     .enter()
     .append("path")
     .attr("class", "country")
     .attr("d", path)
     .attr("fill", (d) => {
-      // Try to find the country's data
       let countryName = d.properties.name;
 
-      // Check if we need to map the name
       if (countryNameMap[countryName]) {
         countryName = countryNameMap[countryName];
       }
@@ -316,9 +351,9 @@ function createChoroplethInternet(geoData, data) {
       const value = dataLookup[countryName];
 
       if (value !== undefined) {
-        return colorScale(value);
+        return colorScale(value); // Color if has data
       } else {
-        return "#ccc"; // Gray for no data
+        return "url(#diagonal-hatch)"; // Diagonal hatch pattern if no data
       }
     })
     .on("mouseover", function (event, d) {
@@ -329,22 +364,13 @@ function createChoroplethInternet(geoData, data) {
       const value = dataLookup[countryName];
 
       d3.select(this).style("stroke", "#333").style("stroke-width", "1.5px");
-
-      // Show tooltip (optional - we'll add this later)
     })
     .on("mouseout", function () {
       d3.select(this).style("stroke", "#fff").style("stroke-width", "0.5px");
     });
 
   // Add legend
-  addLegend(
-    svg,
-    colorScale,
-    minInternet,
-    maxInternet,
-    "Internet Access (%)",
-    width,
-  );
+  addLegend(svg, colorScale, 0, 100, "Internet Access (%)", width, height);
 }
 
 function createChoroplethLife(geoData, data) {
@@ -356,23 +382,47 @@ function createChoroplethLife(geoData, data) {
 
   // Create a country name mapping for mismatches
   const countryNameMap = {
-    "United States of America": "United States",
-    Korea: "South Korea",
+    Antarctica: "Antarctica",
+    "French Southern and Antarctic Lands": "French Guiana",
+    "The Bahamas": "Bahamas",
+    "Central African Republic": "Central African Republic",
+    "Ivory Coast": "Côte d'Ivoire",
     "Democratic Republic of the Congo": "Democratic Republic of Congo",
     "Republic of the Congo": "Congo",
-    Czechia: "Czech Republic",
-    Palestine: "Palestine",
-    Tanzania: "Tanzania",
-    "Bosnia and Herzegovina": "Bosnia and Herzegovina",
-    "Micronesia (Federated States of)": "Micronesia",
-    Kyrgyzstan: "Kyrgyzstan",
+    "Northern Cyprus": "Cyprus",
+    "Czech Republic": "Czechia",
+    Ethiopia: "Ethiopia",
+    "Falkland Islands": "Falkland Islands",
+    England: "United Kingdom",
+    "Guinea Bissau": "Guinea-Bissau",
+    Greenland: "Greenland",
+    Haiti: "Haiti",
+    India: "India",
+    Kosovo: "Kosovo",
+    Macedonia: "North Macedonia",
+    "New Caledonia": "New Caledonia",
+    "Puerto Rico": "Puerto Rico",
+    "North Korea": "North Korea",
+    "Western Sahara": "Western Sahara",
+    Sudan: "Sudan",
+    "South Sudan": "South Sudan",
+    Somaliland: "Somalia",
+    Somalia: "Somalia",
+    "Republic of Serbia": "Serbia",
+    Swaziland: "Eswatini",
+    Syria: "Syria",
     Turkmenistan: "Turkmenistan",
-    "Timor-Leste": "East Timor",
+    Taiwan: "Taiwan",
+    "United Republic of Tanzania": "Tanzania",
+    USA: "United States",
+    Venezuela: "Venezuela",
+    "West Bank": "Palestine",
+    Yemen: "Yemen",
   };
 
   const margin = { top: 20, right: 20, bottom: 20, left: 20 };
-  const width = 600 - margin.left - margin.right;
-  const height = 400 - margin.top - margin.bottom;
+  const width = 650 - margin.left - margin.right;
+  const height = 450 - margin.top - margin.bottom;
 
   const svg = d3
     .select("#map-life")
@@ -382,6 +432,17 @@ function createChoroplethLife(geoData, data) {
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
+  const defs = svg.append("defs");
+  defs
+    .append("pattern")
+    .attr("id", "diagonal-hatch")
+    .attr("patternUnits", "userSpaceOnUse")
+    .attr("width", 5)
+    .attr("height", 5)
+    .append("path")
+    .attr("d", "M-1,1 l2,-2 M1,3 l2,-2 M3,5 l2,-2 M5,7 l2,-2")
+    .attr("stroke", "#999")
+    .attr("stroke-width", 0.3);
   // Create projection and path
   const projection = d3.geoMercator().fitSize([width, height], geoData);
 
@@ -390,28 +451,30 @@ function createChoroplethLife(geoData, data) {
   // Get min and max values for color scale
   const minLife = d3.min(data, (d) => d.life);
   const maxLife = d3.max(data, (d) => d.life);
-  const midLife = (minLife + maxLife) / 2;
 
-  // Create diverging color scale (red-white-blue)
+  // Create sequential color scale (white to dark blue)
   const colorScale = d3
     .scaleLinear()
-    .domain([minLife, midLife, maxLife])
-    .range(["#d73027", "#ffffff", "#4575b4"])
+    .domain([minLife, maxLife])
+    .range(["#ffffff", "#08519c"]) // White to dark blue
     .clamp(true);
+
+  // Filter out countries with no data
+  const countriesForMap = geoData.features.filter((feature) => {
+    return feature.properties.name !== "Antarctica";
+  });
 
   // Draw countries
   svg
     .selectAll(".country")
-    .data(geoData.features)
+    .data(countriesForMap)
     .enter()
     .append("path")
     .attr("class", "country")
     .attr("d", path)
     .attr("fill", (d) => {
-      // Try to find the country's data
       let countryName = d.properties.name;
 
-      // Check if we need to map the name
       if (countryNameMap[countryName]) {
         countryName = countryNameMap[countryName];
       }
@@ -419,9 +482,9 @@ function createChoroplethLife(geoData, data) {
       const value = dataLookup[countryName];
 
       if (value !== undefined) {
-        return colorScale(value);
+        return colorScale(value); // Color if has data
       } else {
-        return "#ccc"; // Gray for no data
+        return "url(#diagonal-hatch)"; // Diagonal hatch pattern if no data
       }
     })
     .on("mouseover", function (event, d) {
@@ -438,72 +501,55 @@ function createChoroplethLife(geoData, data) {
     });
 
   // Add legend
-  addLegend(
-    svg,
-    colorScale,
-    minLife,
-    maxLife,
-    "Life Expectancy (years)",
-    width,
-  );
+  addLegend(svg, colorScale, 45, 90, "Life Expectancy (years)", width, height);
 }
 
 // Helper function to add legend
-function addLegend(svg, colorScale, min, max, label, width) {
+function addLegend(svg, colorScale, min, max, label, width, height) {
   const legendHeight = 20;
-  const legendWidth = 200;
-  const legendX = width - legendWidth - 10;
-  const legendY = 10;
-
-  // Legend background
-  svg
-    .append("rect")
-    .attr("x", legendX)
-    .attr("y", legendY)
-    .attr("width", legendWidth)
-    .attr("height", 80)
-    .attr("fill", "white")
-    .attr("stroke", "#ccc")
-    .attr("stroke-width", "1px");
+  const legendWidth = 250;
+  const legendX = (width - legendWidth) / 2; // Center horizontally
+  const legendY = height - 50; // Below the map
 
   // Legend title
   svg
     .append("text")
-    .attr("x", legendX + 10)
-    .attr("y", legendY + 20)
+    .attr("x", legendX + legendWidth / 2)
+    .attr("y", legendY - 10)
     .attr("font-size", "0.9rem")
     .attr("font-weight", "bold")
+    .attr("text-anchor", "middle")
     .text(label);
 
   // Color gradient
-  const gradientSteps = 5;
-  const stepWidth = legendWidth - 20;
+  const gradientSteps = 10;
+  const stepWidth = legendWidth / gradientSteps;
 
   for (let i = 0; i < gradientSteps; i++) {
     const value = min + (max - min) * (i / (gradientSteps - 1));
 
     svg
       .append("rect")
-      .attr("x", legendX + 10 + (i * stepWidth) / gradientSteps)
-      .attr("y", legendY + 30)
-      .attr("width", stepWidth / gradientSteps)
+      .attr("x", legendX + i * stepWidth)
+      .attr("y", legendY)
+      .attr("width", stepWidth + 1)
       .attr("height", legendHeight)
       .attr("fill", colorScale(value));
   }
 
-  // Legend labels
+  // Legend labels (min and max)
   svg
     .append("text")
-    .attr("x", legendX + 10)
-    .attr("y", legendY + 65)
+    .attr("x", legendX)
+    .attr("y", legendY + legendHeight + 15)
     .attr("font-size", "0.75rem")
-    .text(min.toFixed(1));
+    .text(min.toFixed(0));
 
   svg
     .append("text")
-    .attr("x", legendX + legendWidth - 30)
-    .attr("y", legendY + 65)
+    .attr("x", legendX + legendWidth)
+    .attr("y", legendY + legendHeight + 15)
     .attr("font-size", "0.75rem")
     .attr("text-anchor", "end")
-    .text(max.toFixed(1));
+    .text(max.toFixed(0));
 }
