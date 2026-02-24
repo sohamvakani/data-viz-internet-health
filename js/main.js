@@ -34,6 +34,21 @@ const attributeConfigs = {
     format: ".2f",
   },
 };
+//creating a tooltip
+const tooltip = d3
+  .select("body")
+  .append("div")
+  .attr("class", "tooltip")
+  .style("position", "absolute")
+  .style("padding", "8px")
+  .style("background", "rgba(0, 0, 0, 0.8)")
+  .style("color", "white")
+  .style("border-radius", "4px")
+  .style("pointer-events", "none")
+  .style("font-size", "0.85rem")
+  .style("z-index", "1000")
+  .style("display", "none");
+
 // Function to bin healthcare spending
 function getHealthcareSpendingBin(value) {
   if (value < 50) return "$0-$50";
@@ -567,9 +582,36 @@ function createChoropleth(geoData, data, attributeName, containerId) {
       const value = dataLookup[countryName];
 
       d3.select(this).style("stroke", "#333").style("stroke-width", "1.5px");
+
+      //show tooltip
+      if (value != undefined) {
+        tooltip
+          .style("display", "block")
+          .style("left", event.pageX + 10 + "px")
+          .style("top", event.pageY - 10 + "px")
+          .html(
+            `<strong>${countryName}</strong><br/>${config.label}: ${value.toFixed(2)}`,
+          );
+      } else {
+        // Show tooltip for no-data countries
+        tooltip
+          .style("display", "block")
+          .style("left", event.pageX + 10 + "px")
+          .style("top", event.pageY - 10 + "px")
+          .html(`<strong>${countryName}</strong><br/>No data available`);
+      }
+    })
+    .on("mousemove", function (event) {
+      // Update tooltip position as mouse moves
+      tooltip
+        .style("left", event.pageX + 10 + "px")
+        .style("top", event.pageY - 10 + "px");
     })
     .on("mouseout", function () {
       d3.select(this).style("stroke", "#fff").style("stroke-width", "0.5px");
+
+      // Hide tooltip
+      tooltip.style("display", "none");
     });
 
   // Add legend
