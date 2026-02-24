@@ -293,16 +293,15 @@ function createChoroplethInternet(geoData, data) {
 
   const margin = { top: 20, right: 20, bottom: 20, left: 20 };
   const width = 650 - margin.left - margin.right;
-  const height = 450 - margin.top - margin.bottom;
+  const height = 475 - margin.top - margin.bottom;
 
   const svg = d3
     .select("#map-internet")
     .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
+    .attr("width", width - 60)
+    .attr("height", height - 30)
     .append("g")
-    .attr("transform", `translate(${margin.left},${margin.top})`);
-
+    .attr("transform", `translate(${margin.left - 30},${margin.top - 10})`);
   const defs = svg.append("defs");
   defs
     .append("pattern")
@@ -422,15 +421,15 @@ function createChoroplethLife(geoData, data) {
 
   const margin = { top: 20, right: 20, bottom: 20, left: 20 };
   const width = 650 - margin.left - margin.right;
-  const height = 450 - margin.top - margin.bottom;
+  const height = 475 - margin.top - margin.bottom;
 
   const svg = d3
     .select("#map-life")
     .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
+    .attr("width", width - 60)
+    .attr("height", height - 30)
     .append("g")
-    .attr("transform", `translate(${margin.left},${margin.top})`);
+    .attr("transform", `translate(${margin.left - 30},${margin.top - 10})`);
 
   const defs = svg.append("defs");
   defs
@@ -506,50 +505,69 @@ function createChoroplethLife(geoData, data) {
 
 // Helper function to add legend
 function addLegend(svg, colorScale, min, max, label, width, height) {
-  const legendHeight = 20;
-  const legendWidth = 250;
+  const legendHeight = 18;
+  const legendWidth = 240;
   const legendX = (width - legendWidth) / 2; // Center horizontally
-  const legendY = height - 50; // Below the map
+  const legendY = height - 85; // Below the map
 
   // Legend title
   svg
     .append("text")
     .attr("x", legendX + legendWidth / 2)
-    .attr("y", legendY - 10)
-    .attr("font-size", "0.9rem")
+    .attr("y", legendY - 8)
+    .attr("font-size", "0.85rem")
     .attr("font-weight", "bold")
     .attr("text-anchor", "middle")
     .text(label);
 
-  // Color gradient
-  const gradientSteps = 10;
+  // Color gradient with more steps for detail
+  const gradientSteps = 8;
   const stepWidth = legendWidth / gradientSteps;
 
   for (let i = 0; i < gradientSteps; i++) {
     const value = min + (max - min) * (i / (gradientSteps - 1));
 
+    // Color box
     svg
       .append("rect")
       .attr("x", legendX + i * stepWidth)
       .attr("y", legendY)
       .attr("width", stepWidth + 1)
       .attr("height", legendHeight)
-      .attr("fill", colorScale(value));
+      .attr("fill", colorScale(value))
+      .attr("stroke", "#ddd")
+      .attr("stroke-width", "0.5px");
+
+    // Add ALL value labels
+    svg
+      .append("text")
+      .attr("x", legendX + i * stepWidth + stepWidth / 2)
+      .attr("y", legendY + legendHeight + 12)
+      .attr("font-size", "0.65rem")
+      .attr("text-anchor", "middle")
+      .attr("fill", "#333")
+      .text(value.toFixed(1));
   }
 
-  // Legend labels (min and max)
+  // Add "No Data" pattern box
+  const noDataX = legendX;
+  const noDataY = legendY + legendHeight + 25;
+
   svg
-    .append("text")
-    .attr("x", legendX)
-    .attr("y", legendY + legendHeight + 15)
-    .attr("font-size", "0.75rem")
-    .text(min.toFixed(0));
+    .append("rect")
+    .attr("x", noDataX)
+    .attr("y", noDataY)
+    .attr("width", 30)
+    .attr("height", 18)
+    .attr("fill", "url(#diagonal-hatch)")
+    .attr("stroke", "#999")
+    .attr("stroke-width", "0.5px");
 
   svg
     .append("text")
-    .attr("x", legendX + legendWidth)
-    .attr("y", legendY + legendHeight + 15)
-    .attr("font-size", "0.75rem")
-    .attr("text-anchor", "end")
-    .text(max.toFixed(0));
+    .attr("x", noDataX + 35)
+    .attr("y", noDataY + 14)
+    .attr("font-size", "0.7rem")
+    .attr("fill", "#333")
+    .text("No Data");
 }

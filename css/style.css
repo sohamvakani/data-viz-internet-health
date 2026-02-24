@@ -117,6 +117,12 @@ main {
   color: #333;
 }
 
+.map-container svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  max-width: 100%;
+}
 /* Map SVG styles */
 .country {
   stroke: #fff;
