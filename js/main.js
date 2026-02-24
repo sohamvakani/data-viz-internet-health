@@ -49,6 +49,73 @@ const tooltip = d3
   .style("z-index", "1000")
   .style("display", "none");
 
+// Global state for Level 5 Brushing
+const selectedCountries = new Set();
+
+// Global country map (Moved from createChoropleth so all functions can use it)
+const countryNameMap = {
+  Antarctica: "Antarctica",
+  "French Southern and Antarctic Lands": "French Guiana",
+  "The Bahamas": "Bahamas",
+  "Central African Republic": "Central African Republic",
+  "Ivory Coast": "Côte d'Ivoire",
+  "Democratic Republic of the Congo": "Democratic Republic of Congo",
+  "Republic of the Congo": "Congo",
+  "Northern Cyprus": "Cyprus",
+  "Czech Republic": "Czechia",
+  Ethiopia: "Ethiopia",
+  "Falkland Islands": "Falkland Islands",
+  England: "United Kingdom",
+  "Guinea Bissau": "Guinea-Bissau",
+  Greenland: "Greenland",
+  Haiti: "Haiti",
+  India: "India",
+  Kosovo: "Kosovo",
+  Macedonia: "North Macedonia",
+  "New Caledonia": "New Caledonia",
+  "Puerto Rico": "Puerto Rico",
+  "North Korea": "North Korea",
+  "Western Sahara": "Western Sahara",
+  Sudan: "Sudan",
+  "South Sudan": "South Sudan",
+  Somaliland: "Somalia",
+  Somalia: "Somalia",
+  "Republic of Serbia": "Serbia",
+  Swaziland: "Eswatini",
+  Syria: "Syria",
+  Turkmenistan: "Turkmenistan",
+  Taiwan: "Taiwan",
+  "United Republic of Tanzania": "Tanzania",
+  USA: "United States",
+  Venezuela: "Venezuela",
+  "West Bank": "Palestine",
+  Yemen: "Yemen",
+};
+
+// Global function to update visuals across all charts
+function updateHighlighting() {
+  const hasSelection = selectedCountries.size > 0;
+
+  // 1. Update Scatterplot
+  d3.selectAll(".dot").classed(
+    "dimmed",
+    (d) => hasSelection && !selectedCountries.has(d.country),
+  );
+
+  // 2. Update Map
+  d3.selectAll(".country").classed("dimmed", (d) => {
+    let name = d.properties.name;
+    if (countryNameMap[name]) name = countryNameMap[name];
+    return hasSelection && !selectedCountries.has(name);
+  });
+
+  // 3. Update Histograms (A bar stays lit if ANY of its countries are selected)
+  d3.selectAll(".bar").classed("dimmed", (d) => {
+    if (!hasSelection) return false;
+    return !d.some((item) => selectedCountries.has(item.country));
+  });
+}
+
 // Function to bin healthcare spending
 function getHealthcareSpendingBin(value) {
   if (value < 50) return "$0-$50";
@@ -290,12 +357,14 @@ function createHistogram(data, attributeName, containerId) {
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
   // Create bins using the config
+  // Create bins using the config
   const histogram = d3
     .histogram()
+    .value((d) => d[attributeName]) // Tell D3 which property to bin by
     .domain([config.min, config.max])
     .thresholds(config.bins);
 
-  const bins = histogram(data.map((d) => d[attributeName]));
+  const bins = histogram(data); // Pass the whole array of objects, not just numbers
 
   // Create scales
   const xScale = d3
@@ -363,6 +432,42 @@ function createHistogram(data, attributeName, containerId) {
     .attr("x", -height / 2)
     .attr("fill", "black")
     .text("Number of Countries");
+
+  // --- NEW LEVEL 5 CODE: Add Histogram Brushing ---
+  const brush = d3
+    .brushX()
+    .extent([
+      [0, 0],
+      [width, height],
+    ])
+    .on("start brush end", brushed);
+
+  svg.append("g").attr("class", "brush").call(brush);
+
+  function brushed({ selection }) {
+    if (!selection) {
+      selectedCountries.clear();
+      updateHighlighting();
+      return;
+    }
+
+    const [x0, x1] = selection;
+    selectedCountries.clear();
+
+    // Check which bars overlap with the brush area
+    svg.selectAll(".bar").each(function (d) {
+      const px0 = xScale(d.x0);
+      const px1 = xScale(d.x1);
+
+      // If the bar is inside or overlapping the brush
+      if (x1 >= px0 && x0 <= px1) {
+        // Add all countries in this bin to the selection
+        d.forEach((item) => selectedCountries.add(item.country));
+      }
+    });
+
+    updateHighlighting();
+  }
 }
 
 function createScatterplot(data, attribute1Name, attribute2Name) {
@@ -459,6 +564,38 @@ function createScatterplot(data, attribute1Name, attribute2Name) {
     .attr("text-anchor", "middle") // Add this
     .attr("fill", "black")
     .text(config2.label);
+  // --- NEW LEVEL 5 CODE: Add Scatterplot Brushing ---
+  const brush = d3
+    .brush()
+    .extent([
+      [0, 0],
+      [width, height],
+    ])
+    .on("start brush end", brushed);
+
+  svg.append("g").attr("class", "brush").call(brush);
+
+  function brushed({ selection }) {
+    if (!selection) {
+      selectedCountries.clear();
+      updateHighlighting();
+      return;
+    }
+
+    const [[x0, y0], [x1, y1]] = selection;
+    selectedCountries.clear();
+
+    // Check which dots fall within the brush bounding box
+    svg.selectAll(".dot").each(function (d) {
+      const cx = xScale(d[attribute1Name]);
+      const cy = yScale(d[attribute2Name]);
+      if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
+        selectedCountries.add(d.country);
+      }
+    });
+
+    updateHighlighting();
+  }
 }
 
 function createChoropleth(geoData, data, attributeName, containerId) {
@@ -504,44 +641,44 @@ function createChoropleth(geoData, data, attributeName, containerId) {
   });
 
   // Country name mapping for mismatches
-  const countryNameMap = {
-    Antarctica: "Antarctica",
-    "French Southern and Antarctic Lands": "French Guiana",
-    "The Bahamas": "Bahamas",
-    "Central African Republic": "Central African Republic",
-    "Ivory Coast": "Côte d'Ivoire",
-    "Democratic Republic of the Congo": "Democratic Republic of Congo",
-    "Republic of the Congo": "Congo",
-    "Northern Cyprus": "Cyprus",
-    "Czech Republic": "Czechia",
-    Ethiopia: "Ethiopia",
-    "Falkland Islands": "Falkland Islands",
-    England: "United Kingdom",
-    "Guinea Bissau": "Guinea-Bissau",
-    Greenland: "Greenland",
-    Haiti: "Haiti",
-    India: "India",
-    Kosovo: "Kosovo",
-    Macedonia: "North Macedonia",
-    "New Caledonia": "New Caledonia",
-    "Puerto Rico": "Puerto Rico",
-    "North Korea": "North Korea",
-    "Western Sahara": "Western Sahara",
-    Sudan: "Sudan",
-    "South Sudan": "South Sudan",
-    Somaliland: "Somalia",
-    Somalia: "Somalia",
-    "Republic of Serbia": "Serbia",
-    Swaziland: "Eswatini",
-    Syria: "Syria",
-    Turkmenistan: "Turkmenistan",
-    Taiwan: "Taiwan",
-    "United Republic of Tanzania": "Tanzania",
-    USA: "United States",
-    Venezuela: "Venezuela",
-    "West Bank": "Palestine",
-    Yemen: "Yemen",
-  };
+  // const countryNameMap = {
+  //   Antarctica: "Antarctica",
+  //   "French Southern and Antarctic Lands": "French Guiana",
+  //   "The Bahamas": "Bahamas",
+  //   "Central African Republic": "Central African Republic",
+  //   "Ivory Coast": "Côte d'Ivoire",
+  //   "Democratic Republic of the Congo": "Democratic Republic of Congo",
+  //   "Republic of the Congo": "Congo",
+  //   "Northern Cyprus": "Cyprus",
+  //   "Czech Republic": "Czechia",
+  //   Ethiopia: "Ethiopia",
+  //   "Falkland Islands": "Falkland Islands",
+  //   England: "United Kingdom",
+  //   "Guinea Bissau": "Guinea-Bissau",
+  //   Greenland: "Greenland",
+  //   Haiti: "Haiti",
+  //   India: "India",
+  //   Kosovo: "Kosovo",
+  //   Macedonia: "North Macedonia",
+  //   "New Caledonia": "New Caledonia",
+  //   "Puerto Rico": "Puerto Rico",
+  //   "North Korea": "North Korea",
+  //   "Western Sahara": "Western Sahara",
+  //   Sudan: "Sudan",
+  //   "South Sudan": "South Sudan",
+  //   Somaliland: "Somalia",
+  //   Somalia: "Somalia",
+  //   "Republic of Serbia": "Serbia",
+  //   Swaziland: "Eswatini",
+  //   Syria: "Syria",
+  //   Turkmenistan: "Turkmenistan",
+  //   Taiwan: "Taiwan",
+  //   "United Republic of Tanzania": "Tanzania",
+  //   USA: "United States",
+  //   Venezuela: "Venezuela",
+  //   "West Bank": "Palestine",
+  //   Yemen: "Yemen",
+  // };
 
   // Clear container
   d3.select(containerId).html("");

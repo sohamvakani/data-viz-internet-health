@@ -201,3 +201,23 @@ main {
   height: auto;
   display: block;
 }
+
+/* Brushing & Linking States */
+.dot,
+.bar,
+.country {
+  transition:
+    opacity 0.2s ease,
+    fill 0.2s ease;
+}
+
+.dimmed {
+  opacity: 0.1 !important;
+}
+
+/* Ensure the brush selection looks nice */
+.selection {
+  fill: #69b3a2;
+  fill-opacity: 0.3;
+  stroke: #2b7a69;
+}
