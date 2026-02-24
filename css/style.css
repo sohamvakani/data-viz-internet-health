@@ -160,3 +160,39 @@ main {
   font-size: 0.8rem;
   text-align: center;
 }
+
+/* Control Panel */
+#control-panel {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+#control-panel h2 {
+  font-size: 1.3rem;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.button-group {
+  margin-bottom: 1.5rem;
+}
+
+.button-group label {
+  display: inline-block;
+  margin-right: 2rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.button-group input[type="radio"] {
+  margin-right: 0.5rem;
+  cursor: pointer;
+}
+
+.button-group label:hover {
+  color: #0066cc;
+}
