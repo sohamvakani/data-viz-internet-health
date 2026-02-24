@@ -34,6 +34,68 @@ const attributeConfigs = {
     format: ".2f",
   },
 };
+// Function to bin healthcare spending
+function getHealthcareSpendingBin(value) {
+  if (value < 50) return "$0-$50";
+  if (value < 100) return "$50-$100";
+  if (value < 250) return "$100-$250";
+  if (value < 500) return "$250-$500";
+  if (value < 1000) return "$500-$1000";
+  if (value < 2500) return "$1000-$2500";
+  if (value < 5000) return "$2500-$5000";
+  if (value < 10000) return "$5000-$10000";
+  return "$10000+";
+}
+
+// Function to bin infant mortality
+function getInfantMortalityBin(value) {
+  if (value < 0.2) return "0-0.2%";
+  if (value < 0.5) return "0.2-0.5%";
+  if (value < 1) return "0.5-1%";
+  if (value < 2) return "1-2%";
+  if (value < 5) return "2-5%";
+  if (value < 10) return "5-10%";
+  return "10%+";
+}
+
+// Ordinal color scales
+const healthcareColorScale = d3
+  .scaleOrdinal()
+  .domain([
+    "$0-$50",
+    "$50-$100",
+    "$100-$250",
+    "$250-$500",
+    "$500-$1000",
+    "$1000-$2500",
+    "$2500-$5000",
+    "$5000-$10000",
+    "$10000+",
+  ])
+  .range([
+    "#ffffd9",
+    "#edf8b1",
+    "#c7e9b4",
+    "#7fcdbb",
+    "#41b6c4",
+    "#1d91c0",
+    "#225ea8",
+    "#0c2c84",
+    "#051b4a",
+  ]);
+
+const infantMortalityColorScale = d3
+  .scaleOrdinal()
+  .domain(["0-0.2%", "0.2-0.5%", "0.5-1%", "1-2%", "2-5%", "5-10%", "10%+"])
+  .range([
+    "#fef0d9",
+    "#fdd49e",
+    "#fdbb84",
+    "#fc8d59",
+    "#e34a33",
+    "#b30000",
+    "#7f0000",
+  ]);
 //load geojson map data
 const geojsonUrl =
   "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson";
@@ -307,6 +369,31 @@ function createChoropleth(geoData, data, attributeName, containerId) {
     return;
   }
 
+  // Determine which color scale and bin function to use FIRST
+  let colorScale;
+  let getBinFunction;
+
+  if (attributeName === "HealthcareSpending") {
+    colorScale = healthcareColorScale;
+    getBinFunction = getHealthcareSpendingBin;
+  } else if (attributeName === "InfantMortality") {
+    colorScale = infantMortalityColorScale;
+    getBinFunction = getInfantMortalityBin;
+  } else {
+    // Default sequential scale for other attributes
+    const minValue = d3.min(data, (d) => d[attributeName]);
+    const maxValue = d3.max(data, (d) => d[attributeName]);
+    colorScale = d3
+      .scaleLinear()
+      .domain([minValue, maxValue])
+      .range(["#ffffff", "#08519c"])
+      .clamp(true);
+    getBinFunction = null;
+  }
+
+  console.log("Attribute:", attributeName);
+  console.log("ColorScale:", colorScale);
+  console.log("getBinFunction:", getBinFunction);
   // Create a lookup object for fast data access
   const dataLookup = {};
   data.forEach((d) => {
@@ -392,17 +479,6 @@ function createChoropleth(geoData, data, attributeName, containerId) {
   const projection = d3.geoMercator().fitSize([width, height], geoData);
   const path = d3.geoPath().projection(projection);
 
-  // Get min and max values for color scale
-  const minValue = d3.min(data, (d) => d[attributeName]);
-  const maxValue = d3.max(data, (d) => d[attributeName]);
-
-  // Create sequential color scale (white to dark blue)
-  const colorScale = d3
-    .scaleLinear()
-    .domain([minValue, maxValue])
-    .range(["#ffffff", "#08519c"])
-    .clamp(true);
-
   // Filter out Antarctica
   const countriesForMap = geoData.features.filter((feature) => {
     return feature.properties.name !== "Antarctica";
@@ -426,7 +502,13 @@ function createChoropleth(geoData, data, attributeName, containerId) {
       const value = dataLookup[countryName];
 
       if (value !== undefined) {
-        return colorScale(value);
+        // If we have a bin function, use it; otherwise use the linear scale
+        if (getBinFunction) {
+          const bin = getBinFunction(value);
+          return colorScale(bin);
+        } else {
+          return colorScale(value);
+        }
       } else {
         return "url(#diagonal-hatch)";
       }
@@ -445,53 +527,77 @@ function createChoropleth(geoData, data, attributeName, containerId) {
     });
 
   // Add legend
-  addLegend(svg, colorScale, minValue, maxValue, config.label, width, height);
+  addLegend(svg, colorScale, config, width, height, getBinFunction);
 }
 
 // Helper function to add legend
-function addLegend(svg, colorScale, min, max, label, width, height) {
-  const legendHeight = 18;
-  const legendWidth = 240;
-  const legendX = (width - legendWidth) / 2; // Center horizontally
-  const legendY = height - 85; // Below the map
+// Helper function to add legend
+function addLegend(svg, colorScale, config, width, height, getBinFunction) {
+  const legendHeight = 25;
+  const legendWidth = 400;
+  const legendX = (width - legendWidth) / 2;
+  const legendY = height - 55;
 
   // Legend title
   svg
     .append("text")
     .attr("x", legendX + legendWidth / 2)
-    .attr("y", legendY - 8)
+    .attr("y", legendY - 20)
     .attr("font-size", "0.85rem")
     .attr("font-weight", "bold")
     .attr("text-anchor", "middle")
-    .text(label);
+    .text(config.label);
 
-  // Color gradient with more steps for detail
-  const gradientSteps = 8;
-  const stepWidth = legendWidth / gradientSteps;
+  let legendItems;
+  let legendColors;
 
-  for (let i = 0; i < gradientSteps; i++) {
-    const value = min + (max - min) * (i / (gradientSteps - 1));
+  if (getBinFunction) {
+    // For categorical data, use the domain and range from the ordinal scale
+    legendItems = colorScale.domain();
+    legendColors = colorScale.range();
+  } else {
+    // For continuous data, create 8 steps
+    legendItems = [];
+    legendColors = [];
+    const gradientSteps = 8;
+    for (let i = 0; i < gradientSteps; i++) {
+      const value =
+        config.min + (config.max - config.min) * (i / (gradientSteps - 1));
+      legendItems.push(value.toFixed(1));
+      legendColors.push(colorScale(value));
+    }
+  }
 
-    // Color box
+  // Draw legend boxes
+  const stepWidth = legendWidth / legendItems.length;
+
+  for (let i = 0; i < legendItems.length; i++) {
     svg
       .append("rect")
       .attr("x", legendX + i * stepWidth)
       .attr("y", legendY)
       .attr("width", stepWidth + 1)
       .attr("height", legendHeight)
-      .attr("fill", colorScale(value))
+      .attr("fill", legendColors[i])
       .attr("stroke", "#ddd")
       .attr("stroke-width", "0.5px");
 
-    // Add ALL value labels
+    // Add labels - show every other label to avoid crowding
+
+    // Alternate labels above and below the legend
+    const isEven = i % 2 === 0;
+    const labelY = isEven
+      ? legendY - 5 // Above the box
+      : legendY + legendHeight + 15; // Below the box
+
     svg
       .append("text")
       .attr("x", legendX + i * stepWidth + stepWidth / 2)
-      .attr("y", legendY + legendHeight + 12)
+      .attr("y", labelY)
       .attr("font-size", "0.65rem")
       .attr("text-anchor", "middle")
       .attr("fill", "#333")
-      .text(value.toFixed(1));
+      .text(legendItems[i]);
   }
 
   // Add "No Data" pattern box
