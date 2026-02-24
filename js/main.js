@@ -376,7 +376,38 @@ function createHistogram(data, attributeName, containerId) {
     .domain([0, d3.max(bins, (d) => d.length)])
     .range([height, 0]);
 
-  // Draw bars
+ -
+  const brush = d3
+    .brushX()
+    .extent([
+      [0, 0],
+      [width, height],
+    ])
+    .on("start brush end", brushed);
+
+  svg.append("g").attr("class", "brush").call(brush);
+
+  function brushed({ selection }) {
+    if (!selection) {
+      selectedCountries.clear();
+      updateHighlighting();
+      return;
+    }
+
+    const [x0, x1] = selection;
+    selectedCountries.clear();
+
+    svg.selectAll(".bar").each(function (d) {
+      const px0 = xScale(d.x0);
+      const px1 = xScale(d.x1);
+
+      if (x1 >= px0 && x0 <= px1) {
+        d.forEach((item) => selectedCountries.add(item.country));
+      }
+    });
+
+    updateHighlighting();
+  }
   // Draw bars
   svg
     .selectAll(".bar")
@@ -432,42 +463,6 @@ function createHistogram(data, attributeName, containerId) {
     .attr("x", -height / 2)
     .attr("fill", "black")
     .text("Number of Countries");
-
-  // --- NEW LEVEL 5 CODE: Add Histogram Brushing ---
-  const brush = d3
-    .brushX()
-    .extent([
-      [0, 0],
-      [width, height],
-    ])
-    .on("start brush end", brushed);
-
-  svg.append("g").attr("class", "brush").call(brush);
-
-  function brushed({ selection }) {
-    if (!selection) {
-      selectedCountries.clear();
-      updateHighlighting();
-      return;
-    }
-
-    const [x0, x1] = selection;
-    selectedCountries.clear();
-
-    // Check which bars overlap with the brush area
-    svg.selectAll(".bar").each(function (d) {
-      const px0 = xScale(d.x0);
-      const px1 = xScale(d.x1);
-
-      // If the bar is inside or overlapping the brush
-      if (x1 >= px0 && x0 <= px1) {
-        // Add all countries in this bin to the selection
-        d.forEach((item) => selectedCountries.add(item.country));
-      }
-    });
-
-    updateHighlighting();
-  }
 }
 
 function createScatterplot(data, attribute1Name, attribute2Name) {
@@ -507,6 +502,37 @@ function createScatterplot(data, attribute1Name, attribute2Name) {
     .domain([config2.min, config2.max])
     .range([height, 0]);
 
+
+  const brush = d3
+    .brush()
+    .extent([
+      [0, 0],
+      [width, height],
+    ])
+    .on("start brush end", brushed);
+
+  svg.append("g").attr("class", "brush").call(brush);
+
+  function brushed({ selection }) {
+    if (!selection) {
+      selectedCountries.clear();
+      updateHighlighting();
+      return;
+    }
+
+    const [[x0, y0], [x1, y1]] = selection;
+    selectedCountries.clear();
+
+    svg.selectAll(".dot").each(function (d) {
+      const cx = xScale(d[attribute1Name]);
+      const cy = yScale(d[attribute2Name]);
+      if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
+        selectedCountries.add(d.country);
+      }
+    });
+
+    updateHighlighting();
+  }
   // Draw dots
   // Draw dots
   svg
@@ -564,38 +590,6 @@ function createScatterplot(data, attribute1Name, attribute2Name) {
     .attr("text-anchor", "middle") // Add this
     .attr("fill", "black")
     .text(config2.label);
-  // --- NEW LEVEL 5 CODE: Add Scatterplot Brushing ---
-  const brush = d3
-    .brush()
-    .extent([
-      [0, 0],
-      [width, height],
-    ])
-    .on("start brush end", brushed);
-
-  svg.append("g").attr("class", "brush").call(brush);
-
-  function brushed({ selection }) {
-    if (!selection) {
-      selectedCountries.clear();
-      updateHighlighting();
-      return;
-    }
-
-    const [[x0, y0], [x1, y1]] = selection;
-    selectedCountries.clear();
-
-    // Check which dots fall within the brush bounding box
-    svg.selectAll(".dot").each(function (d) {
-      const cx = xScale(d[attribute1Name]);
-      const cy = yScale(d[attribute2Name]);
-      if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
-        selectedCountries.add(d.country);
-      }
-    });
-
-    updateHighlighting();
-  }
 }
 
 function createChoropleth(geoData, data, attributeName, containerId) {
