@@ -75,8 +75,19 @@ d3.json(geojsonUrl).then((geoData) => {
           'input[name="attribute2"]:checked',
         ).value;
 
-        console.log("About to create histogram for:", attr1);
-        d3.select("#histogram-internet").html(""); // Explicit clear
+        // Update titles
+        document.querySelector(
+          "#maps-section .map-container:first-child h2",
+        ).textContent = attributeConfigs[attr1].label + " Distribution";
+        document.querySelector(
+          "#visualizations .chart-container:first-child h2",
+        ).textContent = attributeConfigs[attr1].label + " Distribution";
+
+        // Clear and redraw
+        d3.select("#histogram-internet").html("");
+        d3.select("#map-internet").html("");
+        d3.select("#scatterplot").html("");
+
         createHistogram(data, attr1, "#histogram-internet");
         createChoropleth(geoData, data, attr1, "#map-internet");
         createScatterplot(data, attr1, attr2);
@@ -89,6 +100,25 @@ d3.json(geojsonUrl).then((geoData) => {
           'input[name="attribute1"]:checked',
         ).value;
         const attr2 = e.target.value;
+
+        // Update titles
+        document.querySelector(
+          "#maps-section .map-container:nth-child(2) h2",
+        ).textContent = attributeConfigs[attr2].label + " Distribution";
+        document.querySelector(
+          "#visualizations .chart-container:nth-child(2) h2",
+        ).textContent = attributeConfigs[attr2].label + " Distribution";
+        document.querySelector(
+          "#visualizations .chart-container.full-width h2",
+        ).textContent =
+          attributeConfigs[attr1].label +
+          " vs " +
+          attributeConfigs[attr2].label;
+
+        // Clear and redraw
+        d3.select("#histogram-life").html("");
+        d3.select("#map-life").html("");
+        d3.select("#scatterplot").html("");
 
         createHistogram(data, attr2, "#histogram-life");
         createChoropleth(geoData, data, attr2, "#map-life");
