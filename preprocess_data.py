@@ -14,7 +14,7 @@ life_years = set(life_expectancy_df['Year'].unique())
 common_years = sorted(internet_years & life_years)
 
 if common_years:
-    most_recent_year = common_years[-1]
+    most_recent_year = common_years[-2]
     print(f"\nMost recent year with data in both datasets: {most_recent_year}")
 else:
     print("No common years found!")
