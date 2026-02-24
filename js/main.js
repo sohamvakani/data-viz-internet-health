@@ -116,6 +116,162 @@ function updateHighlighting() {
   });
 }
 
+function create4DBubbleChart(data) {
+  // Clear the container
+  d3.select("#scatterplot").html("");
+
+  // Update the title
+  document.querySelector(
+    "#visualizations .chart-container.full-width h2",
+  ).textContent =
+    "4D Analysis: Internet vs Life Expectancy (Size: Health $, Color: Infant Mortality)";
+
+  const margin = { top: 20, right: 40, bottom: 50, left: 100 };
+  const width = 1300 - margin.left - margin.right;
+  const height = 400 - margin.top - margin.bottom;
+
+  const svg = d3
+    .select("#scatterplot")
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  // Hardcode the 4 dimensions for this specific chart
+  const attrX = "Internet";
+  const attrY = "LifeExpectancy";
+  const attrSize = "HealthcareSpending";
+  const attrColor = "InfantMortality";
+
+  const confX = attributeConfigs[attrX];
+  const confY = attributeConfigs[attrY];
+  const confSize = attributeConfigs[attrSize];
+
+  // 1. Create Scales
+  const xScale = d3
+    .scaleLinear()
+    .domain([confX.min, confX.max])
+    .range([0, width]);
+  const yScale = d3
+    .scaleLinear()
+    .domain([confY.min, confY.max])
+    .range([height, 0]);
+
+  // Use scaleSqrt for accurate area representation
+  const sizeScale = d3.scaleSqrt().domain([0, confSize.max]).range([3, 25]); // Minimum 3px radius, maximum 25px radius
+
+  // 2. DRAW BRUSH FIRST (So tooltips work!)
+  const brush = d3
+    .brush()
+    .extent([
+      [0, 0],
+      [width, height],
+    ])
+    .on("start brush end", brushed);
+
+  svg.append("g").attr("class", "brush").call(brush);
+
+  function brushed({ selection }) {
+    if (!selection) {
+      selectedCountries.clear();
+      updateHighlighting();
+      return;
+    }
+
+    const [[x0, y0], [x1, y1]] = selection;
+    selectedCountries.clear();
+
+    svg.selectAll(".dot").each(function (d) {
+      const cx = xScale(d[attrX]);
+      const cy = yScale(d[attrY]);
+      if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
+        selectedCountries.add(d.country);
+      }
+    });
+
+    updateHighlighting();
+  }
+
+  // 3. DRAW BUBBLES SECOND
+  svg
+    .selectAll(".dot")
+    .data(data)
+    .enter()
+    .append("circle")
+    .attr("class", "dot") // Re-use the .dot class so Level 5 dimming works automatically
+    .attr("cx", (d) => xScale(d[attrX]))
+    .attr("cy", (d) => yScale(d[attrY]))
+    .attr("r", (d) => sizeScale(d[attrSize]))
+    .style("fill", (d) =>
+      infantMortalityColorScale(getInfantMortalityBin(d[attrColor])),
+    )
+    .style("stroke", "#333")
+    .style("stroke-width", "0.5px")
+    .on("mouseover", function (event, d) {
+      d3.select(this).style("stroke-width", "2px");
+
+      // Detailed 4D Tooltip
+      tooltip
+        .style("display", "block")
+        .html(
+          `<strong>${d.country}</strong><br/>
+               Internet: ${d[attrX].toFixed(1)}%<br/>
+               Life Exp: ${d[attrY].toFixed(1)} yrs<br/>
+               Health Spend: $${d[attrSize].toFixed(0)}<br/>
+               Infant Mortality: ${d[attrColor].toFixed(2)}%`,
+        )
+        .style("left", event.pageX + 15 + "px")
+        .style("top", event.pageY - 15 + "px");
+    })
+    .on("mousemove", function (event) {
+      tooltip
+        .style("left", event.pageX + 15 + "px")
+        .style("top", event.pageY - 15 + "px");
+    })
+    .on("mouseout", function () {
+      d3.select(this).style("stroke-width", "0.5px");
+      tooltip.style("display", "none");
+    });
+
+  // 4. Draw Axes
+  svg
+    .append("g")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(xScale))
+    .append("text")
+    .attr("class", "axis-label")
+    .attr("x", width / 2)
+    .attr("y", 40)
+    .attr("fill", "black")
+    .text(confX.label);
+
+  svg
+    .append("g")
+    .call(d3.axisLeft(yScale))
+    .append("text")
+    .attr("class", "axis-label")
+    .attr("transform", "rotate(-90)")
+    .attr("y", -60)
+    .attr("x", -height / 2)
+    .attr("text-anchor", "middle")
+    .attr("fill", "black")
+    .text(confY.label);
+
+  // 5. Add a simple legend/guide text in the corner
+  svg
+    .append("text")
+    .attr("x", width)
+    .attr("y", height - 15)
+    .attr("text-anchor", "end")
+    .attr("font-size", "0.85rem")
+    .attr("font-style", "italic")
+    .attr("fill", "#666")
+    .text(
+      "Bubble Size = Healthcare Spending | Bubble Color = Infant Mortality Rate",
+    );
+}
+
 // Function to bin healthcare spending
 function getHealthcareSpendingBin(value) {
   if (value < 50) return "$0-$50";
@@ -216,6 +372,7 @@ const infantMortalityColorScale = d3
 //load geojson map data
 const geojsonUrl =
   "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson";
+
 d3.json(geojsonUrl).then((geoData) => {
   d3.csv("data/merged-data.csv").then((data) => {
     // Process data
@@ -239,20 +396,61 @@ d3.json(geojsonUrl).then((geoData) => {
 
     console.log("Data loaded:", data.length, "countries");
 
+    // Helper function to render the correct bottom chart based on toggle
+    function renderBottomChart() {
+      // Find the currently selected chart mode
+      const modeRadio = document.querySelector(
+        'input[name="chartMode"]:checked',
+      );
+      const mode = modeRadio ? modeRadio.value : "2d";
+
+      if (mode === "2d") {
+        const attr1 = document.querySelector(
+          'input[name="attribute1"]:checked',
+        ).value;
+        const attr2 = document.querySelector(
+          'input[name="attribute2"]:checked',
+        ).value;
+
+        document.querySelector(
+          "#visualizations .chart-container.full-width h2",
+        ).textContent =
+          attributeConfigs[attr1].label +
+          " vs " +
+          attributeConfigs[attr2].label;
+
+        createScatterplot(data, attr1, attr2);
+      } else {
+        create4DBubbleChart(data);
+      }
+    }
+
     // Create initial visualizations
     createChoropleth(geoData, data, "Internet", "#map-internet");
     createChoropleth(geoData, data, "LifeExpectancy", "#map-life");
     createHistogram(data, "Internet", "#histogram-internet");
     createHistogram(data, "LifeExpectancy", "#histogram-life");
-    createScatterplot(data, "Internet", "LifeExpectancy");
+    renderBottomChart();
 
-    // ADD EVENT LISTENERS HERE (inside the callback so data and geoData are accessible)
+    // Event Listeners for controls
+
+    // Toggle for 2D/4D chart
+    const chartModeInputs = document.querySelectorAll(
+      'input[name="chartMode"]',
+    );
+    if (chartModeInputs.length > 0) {
+      chartModeInputs.forEach((radio) => {
+        radio.addEventListener("change", () => {
+          selectedCountries.clear();
+          updateHighlighting();
+          renderBottomChart();
+        });
+      });
+    }
+
     document.querySelectorAll('input[name="attribute1"]').forEach((radio) => {
       radio.addEventListener("change", (e) => {
         const attr1 = e.target.value;
-        const attr2 = document.querySelector(
-          'input[name="attribute2"]:checked',
-        ).value;
 
         // Update titles
         document.querySelector(
@@ -261,29 +459,19 @@ d3.json(geojsonUrl).then((geoData) => {
         document.querySelector(
           "#visualizations .chart-container:first-child h2",
         ).textContent = attributeConfigs[attr1].label + " Distribution";
-        document.querySelector(
-          "#visualizations .chart-container.full-width h2",
-        ).textContent =
-          attributeConfigs[attr1].label +
-          " vs " +
-          attributeConfigs[attr2].label;
 
         // Clear and redraw
         d3.select("#histogram-internet").html("");
         d3.select("#map-internet").html("");
-        d3.select("#scatterplot").html("");
 
         createHistogram(data, attr1, "#histogram-internet");
         createChoropleth(geoData, data, attr1, "#map-internet");
-        createScatterplot(data, attr1, attr2);
+        renderBottomChart();
       });
     });
 
     document.querySelectorAll('input[name="attribute2"]').forEach((radio) => {
       radio.addEventListener("change", (e) => {
-        const attr1 = document.querySelector(
-          'input[name="attribute1"]:checked',
-        ).value;
         const attr2 = e.target.value;
 
         // Update titles
@@ -293,21 +481,14 @@ d3.json(geojsonUrl).then((geoData) => {
         document.querySelector(
           "#visualizations .chart-container:nth-child(2) h2",
         ).textContent = attributeConfigs[attr2].label + " Distribution";
-        document.querySelector(
-          "#visualizations .chart-container.full-width h2",
-        ).textContent =
-          attributeConfigs[attr1].label +
-          " vs " +
-          attributeConfigs[attr2].label;
 
         // Clear and redraw
         d3.select("#histogram-life").html("");
         d3.select("#map-life").html("");
-        d3.select("#scatterplot").html("");
 
         createHistogram(data, attr2, "#histogram-life");
         createChoropleth(geoData, data, attr2, "#map-life");
-        createScatterplot(data, attr1, attr2);
+        renderBottomChart();
       });
     });
   });
