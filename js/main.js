@@ -5,9 +5,8 @@ const geojsonUrl =
   "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson";
 
 d3.json(geojsonUrl).then((geoData) => {
-  // Loading country data
   d3.csv("data/merged-data.csv").then((data) => {
-    // Processing data to convert strings to numbers and remove World
+    // Process data
     data = data
       .filter((d) => d.Country !== "World")
       .map((d) => ({
@@ -20,6 +19,9 @@ d3.json(geojsonUrl).then((geoData) => {
 
     console.log("Data loaded:", data.length, "countries");
 
+    // DEBUG: Find mismatches
+    const unmatched = debugCountryMatches(geoData, data);
+
     // Create visualizations
     createChoroplethInternet(geoData, data);
     createChoroplethLife(geoData, data);
@@ -28,6 +30,28 @@ d3.json(geojsonUrl).then((geoData) => {
     createScatterplot(data);
   });
 });
+
+function debugCountryMatches(geoData, data) {
+  // Create a lookup object from your data
+  const dataLookup = {};
+  data.forEach((d) => {
+    dataLookup[d.country] = true;
+  });
+
+  // Check which GeoJSON countries don't match
+  const unmatchedGeoCountries = [];
+  geoData.features.forEach((feature) => {
+    const geoName = feature.properties.name;
+    if (!dataLookup[geoName]) {
+      unmatchedGeoCountries.push(geoName);
+    }
+  });
+
+  console.log("GeoJSON countries with NO match in your data:");
+  console.log(unmatchedGeoCountries);
+
+  return unmatchedGeoCountries;
+}
 
 function createHistogramInternet(data) {
   const margin = { top: 20, right: 20, bottom: 40, left: 50 };
@@ -218,4 +242,268 @@ function createScatterplot(data) {
     .attr("x", -height / 2)
     .attr("fill", "black")
     .text("Life Expectancy (years)");
+}
+
+function createChoroplethInternet(geoData, data) {
+  // Create a lookup object for fast data access
+  const dataLookup = {};
+  data.forEach((d) => {
+    dataLookup[d.country] = d.internet;
+  });
+
+  // Create a country name mapping for mismatches
+  const countryNameMap = {
+    "United States of America": "United States",
+    Korea: "South Korea",
+    "Democratic Republic of the Congo": "Democratic Republic of Congo",
+    "Republic of the Congo": "Congo",
+    Czechia: "Czech Republic",
+    Palestine: "Palestine",
+    Tanzania: "Tanzania",
+    "Bosnia and Herzegovina": "Bosnia and Herzegovina",
+    "Micronesia (Federated States of)": "Micronesia",
+    Kyrgyzstan: "Kyrgyzstan",
+    Turkmenistan: "Turkmenistan",
+    "Timor-Leste": "East Timor",
+  };
+
+  const margin = { top: 20, right: 20, bottom: 20, left: 20 };
+  const width = 600 - margin.left - margin.right;
+  const height = 400 - margin.top - margin.bottom;
+
+  const svg = d3
+    .select("#map-internet")
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  // Create projection and path
+  const projection = d3.geoMercator().fitSize([width, height], geoData);
+
+  const path = d3.geoPath().projection(projection);
+
+  // Get min and max values for color scale
+  const minInternet = d3.min(data, (d) => d.internet);
+  const maxInternet = d3.max(data, (d) => d.internet);
+  const midInternet = (minInternet + maxInternet) / 2;
+
+  // Create diverging color scale (red-white-blue)
+  const colorScale = d3
+    .scaleLinear()
+    .domain([minInternet, midInternet, maxInternet])
+    .range(["#d73027", "#ffffff", "#4575b4"])
+    .clamp(true);
+
+  // Draw countries
+  svg
+    .selectAll(".country")
+    .data(geoData.features)
+    .enter()
+    .append("path")
+    .attr("class", "country")
+    .attr("d", path)
+    .attr("fill", (d) => {
+      // Try to find the country's data
+      let countryName = d.properties.name;
+
+      // Check if we need to map the name
+      if (countryNameMap[countryName]) {
+        countryName = countryNameMap[countryName];
+      }
+
+      const value = dataLookup[countryName];
+
+      if (value !== undefined) {
+        return colorScale(value);
+      } else {
+        return "#ccc"; // Gray for no data
+      }
+    })
+    .on("mouseover", function (event, d) {
+      let countryName = d.properties.name;
+      if (countryNameMap[countryName]) {
+        countryName = countryNameMap[countryName];
+      }
+      const value = dataLookup[countryName];
+
+      d3.select(this).style("stroke", "#333").style("stroke-width", "1.5px");
+
+      // Show tooltip (optional - we'll add this later)
+    })
+    .on("mouseout", function () {
+      d3.select(this).style("stroke", "#fff").style("stroke-width", "0.5px");
+    });
+
+  // Add legend
+  addLegend(
+    svg,
+    colorScale,
+    minInternet,
+    maxInternet,
+    "Internet Access (%)",
+    width,
+  );
+}
+
+function createChoroplethLife(geoData, data) {
+  // Create a lookup object for fast data access
+  const dataLookup = {};
+  data.forEach((d) => {
+    dataLookup[d.country] = d.life;
+  });
+
+  // Create a country name mapping for mismatches
+  const countryNameMap = {
+    "United States of America": "United States",
+    Korea: "South Korea",
+    "Democratic Republic of the Congo": "Democratic Republic of Congo",
+    "Republic of the Congo": "Congo",
+    Czechia: "Czech Republic",
+    Palestine: "Palestine",
+    Tanzania: "Tanzania",
+    "Bosnia and Herzegovina": "Bosnia and Herzegovina",
+    "Micronesia (Federated States of)": "Micronesia",
+    Kyrgyzstan: "Kyrgyzstan",
+    Turkmenistan: "Turkmenistan",
+    "Timor-Leste": "East Timor",
+  };
+
+  const margin = { top: 20, right: 20, bottom: 20, left: 20 };
+  const width = 600 - margin.left - margin.right;
+  const height = 400 - margin.top - margin.bottom;
+
+  const svg = d3
+    .select("#map-life")
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  // Create projection and path
+  const projection = d3.geoMercator().fitSize([width, height], geoData);
+
+  const path = d3.geoPath().projection(projection);
+
+  // Get min and max values for color scale
+  const minLife = d3.min(data, (d) => d.life);
+  const maxLife = d3.max(data, (d) => d.life);
+  const midLife = (minLife + maxLife) / 2;
+
+  // Create diverging color scale (red-white-blue)
+  const colorScale = d3
+    .scaleLinear()
+    .domain([minLife, midLife, maxLife])
+    .range(["#d73027", "#ffffff", "#4575b4"])
+    .clamp(true);
+
+  // Draw countries
+  svg
+    .selectAll(".country")
+    .data(geoData.features)
+    .enter()
+    .append("path")
+    .attr("class", "country")
+    .attr("d", path)
+    .attr("fill", (d) => {
+      // Try to find the country's data
+      let countryName = d.properties.name;
+
+      // Check if we need to map the name
+      if (countryNameMap[countryName]) {
+        countryName = countryNameMap[countryName];
+      }
+
+      const value = dataLookup[countryName];
+
+      if (value !== undefined) {
+        return colorScale(value);
+      } else {
+        return "#ccc"; // Gray for no data
+      }
+    })
+    .on("mouseover", function (event, d) {
+      let countryName = d.properties.name;
+      if (countryNameMap[countryName]) {
+        countryName = countryNameMap[countryName];
+      }
+      const value = dataLookup[countryName];
+
+      d3.select(this).style("stroke", "#333").style("stroke-width", "1.5px");
+    })
+    .on("mouseout", function () {
+      d3.select(this).style("stroke", "#fff").style("stroke-width", "0.5px");
+    });
+
+  // Add legend
+  addLegend(
+    svg,
+    colorScale,
+    minLife,
+    maxLife,
+    "Life Expectancy (years)",
+    width,
+  );
+}
+
+// Helper function to add legend
+function addLegend(svg, colorScale, min, max, label, width) {
+  const legendHeight = 20;
+  const legendWidth = 200;
+  const legendX = width - legendWidth - 10;
+  const legendY = 10;
+
+  // Legend background
+  svg
+    .append("rect")
+    .attr("x", legendX)
+    .attr("y", legendY)
+    .attr("width", legendWidth)
+    .attr("height", 80)
+    .attr("fill", "white")
+    .attr("stroke", "#ccc")
+    .attr("stroke-width", "1px");
+
+  // Legend title
+  svg
+    .append("text")
+    .attr("x", legendX + 10)
+    .attr("y", legendY + 20)
+    .attr("font-size", "0.9rem")
+    .attr("font-weight", "bold")
+    .text(label);
+
+  // Color gradient
+  const gradientSteps = 5;
+  const stepWidth = legendWidth - 20;
+
+  for (let i = 0; i < gradientSteps; i++) {
+    const value = min + (max - min) * (i / (gradientSteps - 1));
+
+    svg
+      .append("rect")
+      .attr("x", legendX + 10 + (i * stepWidth) / gradientSteps)
+      .attr("y", legendY + 30)
+      .attr("width", stepWidth / gradientSteps)
+      .attr("height", legendHeight)
+      .attr("fill", colorScale(value));
+  }
+
+  // Legend labels
+  svg
+    .append("text")
+    .attr("x", legendX + 10)
+    .attr("y", legendY + 65)
+    .attr("font-size", "0.75rem")
+    .text(min.toFixed(1));
+
+  svg
+    .append("text")
+    .attr("x", legendX + legendWidth - 30)
+    .attr("y", legendY + 65)
+    .attr("font-size", "0.75rem")
+    .attr("text-anchor", "end")
+    .text(max.toFixed(1));
 }
