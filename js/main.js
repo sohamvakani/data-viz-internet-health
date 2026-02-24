@@ -1,9 +1,139 @@
 // Internet Access vs Life Expectancy Visualization
+// Attribute configurations
+const attributeConfigs = {
+  Internet: {
+    attribute: "Internet",
+    label: "Internet Access (%)",
+    min: 0,
+    max: 100,
+    bins: d3.range(0, 105, 10),
+    format: ".1f", // Format for displaying values
+  },
+  LifeExpectancy: {
+    attribute: "LifeExpectancy",
+    label: "Life Expectancy (years)",
+    min: 50,
+    max: 90,
+    bins: d3.range(50, 92, 2),
+    format: ".1f",
+  },
+  HealthcareSpending: {
+    attribute: "HealthcareSpending",
+    label: "Healthcare Spending ($ per capita)",
+    min: 0,
+    max: 13000,
+    bins: d3.range(0, 13500, 1000),
+    format: ".0f",
+  },
+  InfantMortality: {
+    attribute: "InfantMortality",
+    label: "Infant Mortality Rate (per 1,000 births)",
+    min: 0,
+    max: 9,
+    bins: d3.range(0, 9.5, 0.5),
+    format: ".2f",
+  },
+};
+// Function to bin healthcare spending
+function getHealthcareSpendingBin(value) {
+  if (value < 50) return "$0-$50";
+  if (value < 100) return "$50-$100";
+  if (value < 250) return "$100-$250";
+  if (value < 500) return "$250-$500";
+  if (value < 1000) return "$500-$1000";
+  if (value < 2500) return "$1000-$2500";
+  if (value < 5000) return "$2500-$5000";
+  if (value < 10000) return "$5000-$10000";
+  return "$10000+";
+}
 
+// Function to bin infant mortality
+function getInfantMortalityBin(value) {
+  if (value < 0.2) return "0-0.2%";
+  if (value < 0.5) return "0.2-0.5%";
+  if (value < 1) return "0.5-1%";
+  if (value < 2) return "1-2%";
+  if (value < 5) return "2-5%";
+  if (value < 10) return "5-10%";
+  return "10%+";
+}
+
+// Function to bin life expectancy
+function getLifeExpectancyBin(value) {
+  if (value < 55) return "50-55";
+  if (value < 60) return "55-60";
+  if (value < 65) return "60-65";
+  if (value < 70) return "65-70";
+  if (value < 75) return "70-75";
+  if (value < 80) return "75-80";
+  if (value < 85) return "80-85";
+  return "85-90";
+}
+
+// Ordinal color scale for life expectancy (same as healthcare spending)
+const lifeExpectancyColorScale = d3
+  .scaleOrdinal()
+  .domain([
+    "50-55",
+    "55-60",
+    "60-65",
+    "65-70",
+    "70-75",
+    "75-80",
+    "80-85",
+    "85-90",
+  ])
+  .range([
+    "#ffffd9",
+    "#edf8b1",
+    "#c7e9b4",
+    "#7fcdbb",
+    "#41b6c4",
+    "#1d91c0",
+    "#225ea8",
+    "#0c2c84",
+  ]);
+// Ordinal color scales
+const healthcareColorScale = d3
+  .scaleOrdinal()
+  .domain([
+    "$0-$50",
+    "$50-$100",
+    "$100-$250",
+    "$250-$500",
+    "$500-$1000",
+    "$1000-$2500",
+    "$2500-$5000",
+    "$5000-$10000",
+    "$10000+",
+  ])
+  .range([
+    "#ffffd9",
+    "#edf8b1",
+    "#c7e9b4",
+    "#7fcdbb",
+    "#41b6c4",
+    "#1d91c0",
+    "#225ea8",
+    "#0c2c84",
+    "#051b4a",
+  ]);
+
+const infantMortalityColorScale = d3
+  .scaleOrdinal()
+  .domain(["0-0.2%", "0.2-0.5%", "0.5-1%", "1-2%", "2-5%", "5-10%", "10%+"])
+  .range([
+    "#fef0d9",
+    "#fdd49e",
+    "#fdbb84",
+    "#fc8d59",
+    "#e34a33",
+    "#b30000",
+    "#7f0000",
+  ]);
 //load geojson map data
 const geojsonUrl =
   "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson";
-
 d3.json(geojsonUrl).then((geoData) => {
   d3.csv("data/merged-data.csv").then((data) => {
     // Process data
@@ -12,25 +142,94 @@ d3.json(geojsonUrl).then((geoData) => {
       .map((d) => ({
         country: d.Country,
         code: d.Code,
-        internet: +d.InternetAccess,
-        life: +d.LifeExpectancy,
+        Internet: +d.Internet,
+        LifeExpectancy: +d.LifeExpectancy,
+        HealthcareSpending: +d.HealthcareSpending,
+        InfantMortality: +d.InfantMortality,
       }))
-      .filter((d) => !isNaN(d.internet) && !isNaN(d.life));
+      .filter(
+        (d) =>
+          !isNaN(d.Internet) &&
+          !isNaN(d.LifeExpectancy) &&
+          !isNaN(d.HealthcareSpending) &&
+          !isNaN(d.InfantMortality),
+      );
 
     console.log("Data loaded:", data.length, "countries");
 
-    // DEBUG: Find mismatches
+    // Create initial visualizations
+    createChoropleth(geoData, data, "Internet", "#map-internet");
+    createChoropleth(geoData, data, "LifeExpectancy", "#map-life");
+    createHistogram(data, "Internet", "#histogram-internet");
+    createHistogram(data, "LifeExpectancy", "#histogram-life");
+    createScatterplot(data, "Internet", "LifeExpectancy");
 
-    // Create visualizations
-    createChoroplethInternet(geoData, data);
-    createChoroplethLife(geoData, data);
-    createHistogramInternet(data);
-    createHistogramLife(data);
-    createScatterplot(data);
-    const unmatched = debugCountryMatches(geoData, data);
+    // ADD EVENT LISTENERS HERE (inside the callback so data and geoData are accessible)
+    document.querySelectorAll('input[name="attribute1"]').forEach((radio) => {
+      radio.addEventListener("change", (e) => {
+        const attr1 = e.target.value;
+        const attr2 = document.querySelector(
+          'input[name="attribute2"]:checked',
+        ).value;
+
+        // Update titles
+        document.querySelector(
+          "#maps-section .map-container:first-child h2",
+        ).textContent = attributeConfigs[attr1].label + " Distribution";
+        document.querySelector(
+          "#visualizations .chart-container:first-child h2",
+        ).textContent = attributeConfigs[attr1].label + " Distribution";
+        document.querySelector(
+          "#visualizations .chart-container.full-width h2",
+        ).textContent =
+          attributeConfigs[attr1].label +
+          " vs " +
+          attributeConfigs[attr2].label;
+
+        // Clear and redraw
+        d3.select("#histogram-internet").html("");
+        d3.select("#map-internet").html("");
+        d3.select("#scatterplot").html("");
+
+        createHistogram(data, attr1, "#histogram-internet");
+        createChoropleth(geoData, data, attr1, "#map-internet");
+        createScatterplot(data, attr1, attr2);
+      });
+    });
+
+    document.querySelectorAll('input[name="attribute2"]').forEach((radio) => {
+      radio.addEventListener("change", (e) => {
+        const attr1 = document.querySelector(
+          'input[name="attribute1"]:checked',
+        ).value;
+        const attr2 = e.target.value;
+
+        // Update titles
+        document.querySelector(
+          "#maps-section .map-container:nth-child(2) h2",
+        ).textContent = attributeConfigs[attr2].label + " Distribution";
+        document.querySelector(
+          "#visualizations .chart-container:nth-child(2) h2",
+        ).textContent = attributeConfigs[attr2].label + " Distribution";
+        document.querySelector(
+          "#visualizations .chart-container.full-width h2",
+        ).textContent =
+          attributeConfigs[attr1].label +
+          " vs " +
+          attributeConfigs[attr2].label;
+
+        // Clear and redraw
+        d3.select("#histogram-life").html("");
+        d3.select("#map-life").html("");
+        d3.select("#scatterplot").html("");
+
+        createHistogram(data, attr2, "#histogram-life");
+        createChoropleth(geoData, data, attr2, "#map-life");
+        createScatterplot(data, attr1, attr2);
+      });
+    });
   });
 });
-
 function debugCountryMatches(geoData, data) {
   // Create a lookup object from your data
   const dataLookup = {};
@@ -52,109 +251,48 @@ function debugCountryMatches(geoData, data) {
 
   return unmatchedGeoCountries;
 }
+function createHistogram(data, attributeName, containerId) {
+  const config = attributeConfigs[attributeName];
 
-function createHistogramInternet(data) {
+  if (!config) {
+    console.error(`No config found for ${attributeName}`);
+    return;
+  }
+
+  // Clear the container first (in case we're updating)
+  d3.select(containerId).html("");
+
   const margin = { top: 20, right: 20, bottom: 40, left: 50 };
   const width = 500 - margin.left - margin.right;
   const height = 350 - margin.top - margin.bottom;
 
   const svg = d3
-    .select("#histogram-internet")
+    .select(containerId)
     .append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  //creating bins
+  // Create bins using the config
   const histogram = d3
     .histogram()
-    .domain([0, 100])
-    .thresholds(d3.range(0, 105, 10));
-  const bins = histogram(data.map((d) => d.internet));
+    .domain([config.min, config.max])
+    .thresholds(config.bins);
 
-  console.log("Number of bins created:", bins.length);
-  console.log("Bins:", bins);
+  const bins = histogram(data.map((d) => d[attributeName]));
 
-  const xScale = d3.scaleLinear().domain([0, 100]).range([0, width]);
+  // Create scales
+  const xScale = d3
+    .scaleLinear()
+    .domain([config.min, config.max])
+    .range([0, width]);
   const yScale = d3
     .scaleLinear()
     .domain([0, d3.max(bins, (d) => d.length)])
     .range([height, 0]);
 
-  console.log("Y Scale Domain:", yScale.domain());
-
-  //Bars
-  svg
-    .selectAll(".bar")
-    .data(bins)
-    .enter()
-    .append("rect")
-    .attr("class", "bar")
-    .attr("x", (d) => xScale(d.x0) + 1)
-    .attr("width", (d) => xScale(d.x1) - xScale(d.x0) - 1)
-    .attr("y", (d) => {
-      const yPos = yScale(d.length);
-      console.log(
-        `Bin with ${d.length} countries: y=${yPos}, height=${height - yPos}`,
-      );
-      return yPos;
-    })
-    .attr("height", (d) => height - yScale(d.length));
-
-  //X axis
-  svg
-    .append("g")
-    .attr("transform", `translate(0,${height})`)
-    .call(d3.axisBottom(xScale))
-    .append("text")
-    .attr("class", "axis-label")
-    .attr("x", width / 2)
-    .attr("y", 35)
-    .attr("fill", "black")
-    .text("Internet Access (%)");
-
-  //Y axis
-  svg
-    .append("g")
-    .call(d3.axisLeft(yScale))
-    .append("text")
-    .attr("class", "axis-label")
-    .attr("transform", "rotate(-90)")
-    .attr("y", -40)
-    .attr("x", -height / 2)
-    .attr("fill", "black")
-    .text("Number of Countries");
-}
-
-function createHistogramLife(data) {
-  const margin = { top: 20, right: 20, bottom: 40, left: 50 };
-  const width = 500 - margin.left - margin.right;
-  const height = 350 - margin.top - margin.bottom;
-
-  const svg = d3
-    .select("#histogram-life")
-    .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-    .append("g")
-    .attr("transform", `translate(${margin.left},${margin.top})`);
-
-  //creating bins
-  const histogram = d3
-    .histogram()
-    .domain([50, 90])
-    .thresholds(d3.range(50, 91, 2));
-
-  const bins = histogram(data.map((d) => d.life));
-
-  const xScale = d3.scaleLinear().domain([50, 90]).range([0, width]);
-  const yScale = d3
-    .scaleLinear()
-    .domain([0, d3.max(bins, (d) => d.length)])
-    .range([height, 0]);
-
-  //Bars
+  // Draw bars
   svg
     .selectAll(".bar")
     .data(bins)
@@ -166,7 +304,7 @@ function createHistogramLife(data) {
     .attr("y", (d) => yScale(d.length))
     .attr("height", (d) => height - yScale(d.length));
 
-  //X axis
+  // X axis
   svg
     .append("g")
     .attr("transform", `translate(0,${height})`)
@@ -176,9 +314,9 @@ function createHistogramLife(data) {
     .attr("x", width / 2)
     .attr("y", 35)
     .attr("fill", "black")
-    .text("Life Expectancy (years)");
+    .text(config.label);
 
-  //Y axis
+  // Y axis
   svg
     .append("g")
     .call(d3.axisLeft(yScale))
@@ -191,10 +329,23 @@ function createHistogramLife(data) {
     .text("Number of Countries");
 }
 
-function createScatterplot(data) {
-  const margin = { top: 20, right: 20, bottom: 50, left: 60 };
+function createScatterplot(data, attribute1Name, attribute2Name) {
+  const config1 = attributeConfigs[attribute1Name];
+  const config2 = attributeConfigs[attribute2Name];
+
+  if (!config1 || !config2) {
+    console.error(
+      `Config not found for ${attribute1Name} or ${attribute2Name}`,
+    );
+    return;
+  }
+
+  // Clear the container first
+  d3.select("#scatterplot").html("");
+
+  const margin = { top: 20, right: 20, bottom: 50, left: 100 };
   const width = 1300 - margin.left - margin.right;
-  const height = 400 - margin.top - margin.bottom;
+  const height = 350 - margin.top - margin.bottom;
 
   const svg = d3
     .select("#scatterplot")
@@ -204,22 +355,29 @@ function createScatterplot(data) {
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  //Scales
-  const xScale = d3.scaleLinear().domain([0, 100]).range([0, width]);
-  const yScale = d3.scaleLinear().domain([50, 90]).range([height, 0]);
+  // Create scales using config values
+  const xScale = d3
+    .scaleLinear()
+    .domain([config1.min, config1.max])
+    .range([0, width]);
 
-  //Dots
+  const yScale = d3
+    .scaleLinear()
+    .domain([config2.min, config2.max])
+    .range([height, 0]);
+
+  // Draw dots
   svg
     .selectAll(".dot")
     .data(data)
     .enter()
     .append("circle")
     .attr("class", "dot")
-    .attr("cx", (d) => xScale(d.internet))
-    .attr("cy", (d) => yScale(d.life))
+    .attr("cx", (d) => xScale(d[attribute1Name]))
+    .attr("cy", (d) => yScale(d[attribute2Name]))
     .attr("r", 5);
 
-  //X axis
+  // X axis
   svg
     .append("g")
     .attr("transform", `translate(0,${height})`)
@@ -229,29 +387,66 @@ function createScatterplot(data) {
     .attr("x", width / 2)
     .attr("y", 40)
     .attr("fill", "black")
-    .text("Internet Access (%)");
+    .text(config1.label);
 
-  //Y axis
+  // Y axis
+  // Y axis
   svg
     .append("g")
     .call(d3.axisLeft(yScale))
     .append("text")
     .attr("class", "axis-label")
     .attr("transform", "rotate(-90)")
-    .attr("y", -50)
+    .attr("y", -80) // Changed from -50 to -80
     .attr("x", -height / 2)
+    .attr("text-anchor", "middle") // Add this
     .attr("fill", "black")
-    .text("Life Expectancy (years)");
+    .text(config2.label);
 }
 
-function createChoroplethInternet(geoData, data) {
+function createChoropleth(geoData, data, attributeName, containerId) {
+  const config = attributeConfigs[attributeName];
+
+  if (!config) {
+    console.error(`No config found for ${attributeName}`);
+    return;
+  }
+
+  // Determine which color scale and bin function to use FIRST
+  let colorScale;
+  let getBinFunction;
+
+  if (attributeName === "HealthcareSpending") {
+    colorScale = healthcareColorScale;
+    getBinFunction = getHealthcareSpendingBin;
+  } else if (attributeName === "InfantMortality") {
+    colorScale = infantMortalityColorScale;
+    getBinFunction = getInfantMortalityBin;
+  } else if (attributeName === "LifeExpectancy") {
+    colorScale = lifeExpectancyColorScale;
+    getBinFunction = getLifeExpectancyBin;
+  } else {
+    // Default sequential scale for other attributes
+    const minValue = d3.min(data, (d) => d[attributeName]);
+    const maxValue = d3.max(data, (d) => d[attributeName]);
+    colorScale = d3
+      .scaleLinear()
+      .domain([minValue, maxValue])
+      .range(["#ffffff", "#08519c"])
+      .clamp(true);
+    getBinFunction = null;
+  }
+
+  console.log("Attribute:", attributeName);
+  console.log("ColorScale:", colorScale);
+  console.log("getBinFunction:", getBinFunction);
   // Create a lookup object for fast data access
   const dataLookup = {};
   data.forEach((d) => {
-    dataLookup[d.country] = d.internet;
+    dataLookup[d.country] = d[attributeName];
   });
 
-  // Create a country name mapping for mismatches
+  // Country name mapping for mismatches
   const countryNameMap = {
     Antarctica: "Antarctica",
     "French Southern and Antarctic Lands": "French Guiana",
@@ -291,17 +486,29 @@ function createChoroplethInternet(geoData, data) {
     Yemen: "Yemen",
   };
 
-  const margin = { top: 20, right: 20, bottom: 20, left: 20 };
-  const width = 650 - margin.left - margin.right;
-  const height = 475 - margin.top - margin.bottom;
+  // Clear container
+  d3.select(containerId).html("");
 
-  const svg = d3
-    .select("#map-internet")
+  const margin = { top: 20, right: 20, bottom: 80, left: 20 };
+  const width = 600 - margin.left - margin.right;
+  const height = 500 - margin.top - margin.bottom;
+
+  const svgElement = d3
+    .select(containerId)
     .append("svg")
-    .attr("width", width - 60)
-    .attr("height", height - 30)
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .attr(
+      "viewBox",
+      `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`,
+    )
+    .attr("preserveAspectRatio", "xMidYMid meet");
+
+  const svg = svgElement
     .append("g")
-    .attr("transform", `translate(${margin.left - 30},${margin.top - 10})`);
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  // Add dashed pattern for no-data countries
   const defs = svg.append("defs");
   defs
     .append("pattern")
@@ -313,152 +520,12 @@ function createChoroplethInternet(geoData, data) {
     .attr("d", "M-1,1 l2,-2 M1,3 l2,-2 M3,5 l2,-2 M5,7 l2,-2")
     .attr("stroke", "#999")
     .attr("stroke-width", 0.3);
+
   // Create projection and path
   const projection = d3.geoMercator().fitSize([width, height], geoData);
-
   const path = d3.geoPath().projection(projection);
-
-  // Get min and max values for color scale
-  const minInternet = d3.min(data, (d) => d.internet);
-  const maxInternet = d3.max(data, (d) => d.internet);
-
-  // Create sequential color scale (white to dark blue)
-  const colorScale = d3
-    .scaleLinear()
-    .domain([minInternet, maxInternet])
-    .range(["#ffffff", "#08519c"]) // White to dark blue
-    .clamp(true);
 
   // Filter out Antarctica
-  const countriesForMap = geoData.features.filter((feature) => {
-    return feature.properties.name !== "Antarctica";
-  });
-  svg
-    .selectAll(".country")
-    .data(countriesForMap)
-    .enter()
-    .append("path")
-    .attr("class", "country")
-    .attr("d", path)
-    .attr("fill", (d) => {
-      let countryName = d.properties.name;
-
-      if (countryNameMap[countryName]) {
-        countryName = countryNameMap[countryName];
-      }
-
-      const value = dataLookup[countryName];
-
-      if (value !== undefined) {
-        return colorScale(value); // Color if has data
-      } else {
-        return "url(#diagonal-hatch)"; // Diagonal hatch pattern if no data
-      }
-    })
-    .on("mouseover", function (event, d) {
-      let countryName = d.properties.name;
-      if (countryNameMap[countryName]) {
-        countryName = countryNameMap[countryName];
-      }
-      const value = dataLookup[countryName];
-
-      d3.select(this).style("stroke", "#333").style("stroke-width", "1.5px");
-    })
-    .on("mouseout", function () {
-      d3.select(this).style("stroke", "#fff").style("stroke-width", "0.5px");
-    });
-
-  // Add legend
-  addLegend(svg, colorScale, 0, 100, "Internet Access (%)", width, height);
-}
-
-function createChoroplethLife(geoData, data) {
-  // Create a lookup object for fast data access
-  const dataLookup = {};
-  data.forEach((d) => {
-    dataLookup[d.country] = d.life;
-  });
-
-  // Create a country name mapping for mismatches
-  const countryNameMap = {
-    Antarctica: "Antarctica",
-    "French Southern and Antarctic Lands": "French Guiana",
-    "The Bahamas": "Bahamas",
-    "Central African Republic": "Central African Republic",
-    "Ivory Coast": "Côte d'Ivoire",
-    "Democratic Republic of the Congo": "Democratic Republic of Congo",
-    "Republic of the Congo": "Congo",
-    "Northern Cyprus": "Cyprus",
-    "Czech Republic": "Czechia",
-    Ethiopia: "Ethiopia",
-    "Falkland Islands": "Falkland Islands",
-    England: "United Kingdom",
-    "Guinea Bissau": "Guinea-Bissau",
-    Greenland: "Greenland",
-    Haiti: "Haiti",
-    India: "India",
-    Kosovo: "Kosovo",
-    Macedonia: "North Macedonia",
-    "New Caledonia": "New Caledonia",
-    "Puerto Rico": "Puerto Rico",
-    "North Korea": "North Korea",
-    "Western Sahara": "Western Sahara",
-    Sudan: "Sudan",
-    "South Sudan": "South Sudan",
-    Somaliland: "Somalia",
-    Somalia: "Somalia",
-    "Republic of Serbia": "Serbia",
-    Swaziland: "Eswatini",
-    Syria: "Syria",
-    Turkmenistan: "Turkmenistan",
-    Taiwan: "Taiwan",
-    "United Republic of Tanzania": "Tanzania",
-    USA: "United States",
-    Venezuela: "Venezuela",
-    "West Bank": "Palestine",
-    Yemen: "Yemen",
-  };
-
-  const margin = { top: 20, right: 20, bottom: 20, left: 20 };
-  const width = 650 - margin.left - margin.right;
-  const height = 475 - margin.top - margin.bottom;
-
-  const svg = d3
-    .select("#map-life")
-    .append("svg")
-    .attr("width", width - 60)
-    .attr("height", height - 30)
-    .append("g")
-    .attr("transform", `translate(${margin.left - 30},${margin.top - 10})`);
-
-  const defs = svg.append("defs");
-  defs
-    .append("pattern")
-    .attr("id", "diagonal-hatch")
-    .attr("patternUnits", "userSpaceOnUse")
-    .attr("width", 5)
-    .attr("height", 5)
-    .append("path")
-    .attr("d", "M-1,1 l2,-2 M1,3 l2,-2 M3,5 l2,-2 M5,7 l2,-2")
-    .attr("stroke", "#999")
-    .attr("stroke-width", 0.3);
-  // Create projection and path
-  const projection = d3.geoMercator().fitSize([width, height], geoData);
-
-  const path = d3.geoPath().projection(projection);
-
-  // Get min and max values for color scale
-  const minLife = d3.min(data, (d) => d.life);
-  const maxLife = d3.max(data, (d) => d.life);
-
-  // Create sequential color scale (white to dark blue)
-  const colorScale = d3
-    .scaleLinear()
-    .domain([minLife, maxLife])
-    .range(["#ffffff", "#08519c"]) // White to dark blue
-    .clamp(true);
-
-  // Filter out countries with no data
   const countriesForMap = geoData.features.filter((feature) => {
     return feature.properties.name !== "Antarctica";
   });
@@ -481,9 +548,15 @@ function createChoroplethLife(geoData, data) {
       const value = dataLookup[countryName];
 
       if (value !== undefined) {
-        return colorScale(value); // Color if has data
+        // If we have a bin function, use it; otherwise use the linear scale
+        if (getBinFunction) {
+          const bin = getBinFunction(value);
+          return colorScale(bin);
+        } else {
+          return colorScale(value);
+        }
       } else {
-        return "url(#diagonal-hatch)"; // Diagonal hatch pattern if no data
+        return "url(#diagonal-hatch)";
       }
     })
     .on("mouseover", function (event, d) {
@@ -500,53 +573,77 @@ function createChoroplethLife(geoData, data) {
     });
 
   // Add legend
-  addLegend(svg, colorScale, 45, 90, "Life Expectancy (years)", width, height);
+  addLegend(svg, colorScale, config, width, height, getBinFunction);
 }
 
 // Helper function to add legend
-function addLegend(svg, colorScale, min, max, label, width, height) {
-  const legendHeight = 18;
-  const legendWidth = 240;
-  const legendX = (width - legendWidth) / 2; // Center horizontally
-  const legendY = height - 85; // Below the map
+// Helper function to add legend
+function addLegend(svg, colorScale, config, width, height, getBinFunction) {
+  const legendHeight = 25;
+  const legendWidth = 400;
+  const legendX = (width - legendWidth) / 2;
+  const legendY = height - 55;
 
   // Legend title
   svg
     .append("text")
     .attr("x", legendX + legendWidth / 2)
-    .attr("y", legendY - 8)
+    .attr("y", legendY - 20)
     .attr("font-size", "0.85rem")
     .attr("font-weight", "bold")
     .attr("text-anchor", "middle")
-    .text(label);
+    .text(config.label);
 
-  // Color gradient with more steps for detail
-  const gradientSteps = 8;
-  const stepWidth = legendWidth / gradientSteps;
+  let legendItems;
+  let legendColors;
 
-  for (let i = 0; i < gradientSteps; i++) {
-    const value = min + (max - min) * (i / (gradientSteps - 1));
+  if (getBinFunction) {
+    // For categorical data, use the domain and range from the ordinal scale
+    legendItems = colorScale.domain();
+    legendColors = colorScale.range();
+  } else {
+    // For continuous data, create 8 steps
+    legendItems = [];
+    legendColors = [];
+    const gradientSteps = 8;
+    for (let i = 0; i < gradientSteps; i++) {
+      const value =
+        config.min + (config.max - config.min) * (i / (gradientSteps - 1));
+      legendItems.push(value.toFixed(1));
+      legendColors.push(colorScale(value));
+    }
+  }
 
-    // Color box
+  // Draw legend boxes
+  const stepWidth = legendWidth / legendItems.length;
+
+  for (let i = 0; i < legendItems.length; i++) {
     svg
       .append("rect")
       .attr("x", legendX + i * stepWidth)
       .attr("y", legendY)
       .attr("width", stepWidth + 1)
       .attr("height", legendHeight)
-      .attr("fill", colorScale(value))
+      .attr("fill", legendColors[i])
       .attr("stroke", "#ddd")
       .attr("stroke-width", "0.5px");
 
-    // Add ALL value labels
+    // Add labels - show every other label to avoid crowding
+
+    // Alternate labels above and below the legend
+    const isEven = i % 2 === 0;
+    const labelY = isEven
+      ? legendY - 5 // Above the box
+      : legendY + legendHeight + 15; // Below the box
+
     svg
       .append("text")
       .attr("x", legendX + i * stepWidth + stepWidth / 2)
-      .attr("y", legendY + legendHeight + 12)
+      .attr("y", labelY)
       .attr("font-size", "0.65rem")
       .attr("text-anchor", "middle")
       .attr("fill", "#333")
-      .text(value.toFixed(1));
+      .text(legendItems[i]);
   }
 
   // Add "No Data" pattern box
