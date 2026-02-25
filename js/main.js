@@ -49,10 +49,8 @@ const tooltip = d3
   .style("z-index", "1000")
   .style("display", "none");
 
-// Global state for Level 5 Brushing
 const selectedCountries = new Set();
 
-// Global country map (Moved from createChoropleth so all functions can use it)
 const countryNameMap = {
   Antarctica: "Antarctica",
   "French Southern and Antarctic Lands": "French Guiana",
@@ -96,20 +94,20 @@ const countryNameMap = {
 function updateHighlighting() {
   const hasSelection = selectedCountries.size > 0;
 
-  // 1. Update Scatterplot
+  //Update Scatterplot
   d3.selectAll(".dot").classed(
     "dimmed",
     (d) => hasSelection && !selectedCountries.has(d.country),
   );
 
-  // 2. Update Map
+  //Update Map
   d3.selectAll(".country").classed("dimmed", (d) => {
     let name = d.properties.name;
     if (countryNameMap[name]) name = countryNameMap[name];
     return hasSelection && !selectedCountries.has(name);
   });
 
-  // 3. Update Histograms (A bar stays lit if ANY of its countries are selected)
+  //Update Histograms
   d3.selectAll(".bar").classed("dimmed", (d) => {
     if (!hasSelection) return false;
     return !d.some((item) => selectedCountries.has(item.country));
@@ -126,7 +124,7 @@ function create4DBubbleChart(data) {
   ).textContent =
     "4D Analysis: Internet vs Life Expectancy (Size: Health $, Color: Infant Mortality)";
 
-  const margin = { top: 20, right: 40, bottom: 50, left: 100 };
+  const margin = { top: 20, right: 40, bottom: 110, left: 100 };
   const width = 1300 - margin.left - margin.right;
   const height = 400 - margin.top - margin.bottom;
 
@@ -148,7 +146,7 @@ function create4DBubbleChart(data) {
   const confY = attributeConfigs[attrY];
   const confSize = attributeConfigs[attrSize];
 
-  // 1. Create Scales
+  //Create Scales
   const xScale = d3
     .scaleLinear()
     .domain([confX.min, confX.max])
@@ -158,10 +156,9 @@ function create4DBubbleChart(data) {
     .domain([confY.min, confY.max])
     .range([height, 0]);
 
-  // Use scaleSqrt for accurate area representation
+  //Use scaleSqrt for accurate area representation
   const sizeScale = d3.scaleSqrt().domain([0, confSize.max]).range([3, 25]); // Minimum 3px radius, maximum 25px radius
 
-  // 2. DRAW BRUSH FIRST (So tooltips work!)
   const brush = d3
     .brush()
     .extent([
@@ -193,13 +190,13 @@ function create4DBubbleChart(data) {
     updateHighlighting();
   }
 
-  // 3. DRAW BUBBLES SECOND
+  // bubbles after brush because I had issues with it in the reverse order
   svg
     .selectAll(".dot")
     .data(data)
     .enter()
     .append("circle")
-    .attr("class", "dot") // Re-use the .dot class so Level 5 dimming works automatically
+    .attr("class", "dot")
     .attr("cx", (d) => xScale(d[attrX]))
     .attr("cy", (d) => yScale(d[attrY]))
     .attr("r", (d) => sizeScale(d[attrSize]))
@@ -234,7 +231,7 @@ function create4DBubbleChart(data) {
       tooltip.style("display", "none");
     });
 
-  // 4. Draw Axes
+  //Axes
   svg
     .append("g")
     .attr("transform", `translate(0,${height})`)
@@ -258,18 +255,114 @@ function create4DBubbleChart(data) {
     .attr("fill", "black")
     .text(confY.label);
 
-  // 5. Add a simple legend/guide text in the corner
-  svg
+  //legend below x axis
+  const legendY = height + 65; // sits below the x-axis label
+  const legendG = svg.append("g").attr("transform", `translate(0, ${legendY})`);
+
+  const mortalityDomain = infantMortalityColorScale.domain();
+  const mortalityRange = infantMortalityColorScale.range();
+  const swatchSize = 12;
+  const swatchGap = 4;
+
+  // Calculate total width of color section so we can center everything
+  // Each swatch: swatchSize + swatchGap + textWidth + padding
+  const swatchLabelWidths = mortalityDomain.map((label) => label.length * 6.2); // approx px per char
+  const colorSectionWidth = mortalityDomain.reduce((acc, label, i) => {
+    return acc + swatchSize + swatchGap + swatchLabelWidths[i] + 10;
+  }, 0);
+
+  // Size bubble samples
+  const sizeSamples = [
+    { label: "$100", value: 100 },
+    { label: "$2,500", value: 2500 },
+    { label: "$10k+", value: 10000 },
+  ];
+  const bubbleMaxR = sizeScale(10000);
+  const bubbleSectionWidth = sizeSamples.reduce((acc, s) => {
+    return acc + sizeScale(s.value) * 2 + 4 + s.label.length * 6.2 + 12;
+  }, 0);
+
+  const totalLegendWidth = colorSectionWidth + 60 + bubbleSectionWidth; // 60px gap between sections
+  const startX = (width - totalLegendWidth) / 2;
+
+  // Label: "Infant Mortality:"
+  legendG
     .append("text")
-    .attr("x", width)
-    .attr("y", height - 15)
-    .attr("text-anchor", "end")
-    .attr("font-size", "0.85rem")
-    .attr("font-style", "italic")
-    .attr("fill", "#666")
-    .text(
-      "Bubble Size = Healthcare Spending | Bubble Color = Infant Mortality Rate",
-    );
+    .attr("x", startX)
+    .attr("y", swatchSize - 1)
+    .attr("font-size", "0.72rem")
+    .attr("font-weight", "bold")
+    .attr("fill", "#444")
+    .text("Infant Mortality:");
+
+  let cursorX = startX + 105;
+
+  mortalityDomain.forEach((label, i) => {
+    legendG
+      .append("rect")
+      .attr("x", cursorX)
+      .attr("y", 0)
+      .attr("width", swatchSize)
+      .attr("height", swatchSize)
+      .attr("rx", 2)
+      .attr("fill", mortalityRange[i])
+      .attr("stroke", "#999")
+      .attr("stroke-width", 0.5);
+
+    legendG
+      .append("text")
+      .attr("x", cursorX + swatchSize + swatchGap)
+      .attr("y", swatchSize - 1)
+      .attr("font-size", "0.68rem")
+      .attr("fill", "#333")
+      .text(label);
+
+    cursorX += swatchSize + swatchGap + swatchLabelWidths[i] + 10;
+  });
+
+  cursorX += 10;
+  legendG
+    .append("line")
+    .attr("x1", cursorX)
+    .attr("y1", -2)
+    .attr("x2", cursorX)
+    .attr("y2", swatchSize + 2)
+    .attr("stroke", "#ccc")
+    .attr("stroke-width", 1);
+  cursorX += 14;
+
+  // Label: "Health Spend:"
+  legendG
+    .append("text")
+    .attr("x", cursorX)
+    .attr("y", swatchSize - 1)
+    .attr("font-size", "0.72rem")
+    .attr("font-weight", "bold")
+    .attr("fill", "#444")
+    .text("Health Spend:");
+  cursorX += 82;
+
+  sizeSamples.forEach((s) => {
+    const r = sizeScale(s.value);
+    legendG
+      .append("circle")
+      .attr("cx", cursorX + r)
+      .attr("cy", swatchSize / 2)
+      .attr("r", r)
+      .attr("fill", "#aac8e4")
+      .attr("stroke", "#333")
+      .attr("stroke-width", 0.5);
+
+    legendG
+      .append("text")
+      .attr("x", cursorX + r * 2 + 4)
+      .attr("y", swatchSize - 1)
+      .attr("font-size", "0.68rem")
+      .attr("fill", "#333")
+      .text(s.label);
+
+    cursorX += r * 2 + 4 + s.label.length * 6.2 + 10;
+  });
 }
 
 // Function to bin healthcare spending
@@ -522,7 +615,7 @@ function createHistogram(data, attributeName, containerId) {
     return;
   }
 
-  // Clear the container first (in case we're updating)
+  // Clear the container first
   d3.select(containerId).html("");
 
   const margin = { top: 20, right: 20, bottom: 40, left: 50 };
@@ -537,7 +630,6 @@ function createHistogram(data, attributeName, containerId) {
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  // Create bins using the config
   // Create bins using the config
   const histogram = d3
     .histogram()
@@ -713,7 +805,6 @@ function createScatterplot(data, attribute1Name, attribute2Name) {
     updateHighlighting();
   }
   // Draw dots
-  // Draw dots
   svg
     .selectAll(".dot")
     .data(data)
@@ -757,16 +848,15 @@ function createScatterplot(data, attribute1Name, attribute2Name) {
     .text(config1.label);
 
   // Y axis
-  // Y axis
   svg
     .append("g")
     .call(d3.axisLeft(yScale))
     .append("text")
     .attr("class", "axis-label")
     .attr("transform", "rotate(-90)")
-    .attr("y", -80) // Changed from -50 to -80
+    .attr("y", -80)
     .attr("x", -height / 2)
-    .attr("text-anchor", "middle") // Add this
+    .attr("text-anchor", "middle")
     .attr("fill", "black")
     .text(config2.label);
 }
@@ -973,7 +1063,6 @@ function createChoropleth(geoData, data, attributeName, containerId) {
   addLegend(svg, colorScale, config, width, height, getBinFunction);
 }
 
-// Helper function to add legend
 // Helper function to add legend
 function addLegend(svg, colorScale, config, width, height, getBinFunction) {
   const legendHeight = 25;

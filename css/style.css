@@ -44,7 +44,6 @@ main {
   padding: 0 2rem 2rem;
 }
 
-/* Grid Level 1 visualizations with 2 equal width columns and some spacing between the charts*/
 #visualizations {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -215,7 +214,6 @@ main {
   opacity: 0.1 !important;
 }
 
-/* Ensure the brush selection looks nice */
 .selection {
   fill: #69b3a2;
   fill-opacity: 0.3;
