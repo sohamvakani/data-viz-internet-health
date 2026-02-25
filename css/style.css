@@ -13,31 +13,35 @@ body {
 
 header {
   background-color: white;
-  padding: 2rem;
-  border-bottom: 2px solid #ddd;
-  margin-bottom: 2rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
 }
-
 header h1 {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
+  font-size: 1.2rem;
+  white-space: nowrap;
 }
-
 header p {
   color: #666;
-  font-size: 0.95rem;
-  margin: 0.3rem 0;
+  font-size: 0.8rem;
+  margin: 0;
 }
-
 header a {
   color: #0066cc;
   text-decoration: none;
 }
-
 header a:hover {
   text-decoration: underline;
 }
-
+.header-meta {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
 main {
   max-width: 1400px;
   margin: 0 auto;
