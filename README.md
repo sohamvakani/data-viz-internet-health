@@ -2,7 +2,7 @@
 
 **By Soham Vakani** | Data Year: 2022 | 176 Countries
 
-🔗 [Live Demo](data-viz-project1-soham-vakani.vercel.app)
+🔗 [Live Demo](https://data-viz-project1-soham-vakani.vercel.app/)
 
 ---
 
