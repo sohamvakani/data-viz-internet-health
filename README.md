@@ -4,7 +4,6 @@
 
 🔗 [Live Demo](https://data-viz-project1-soham-vakani.vercel.app/)
 
----
 
 ## Motivation
 
@@ -12,7 +11,6 @@ As internet access expands across the globe, so does its potential to transform 
 
 This interactive visualization lets you explore those questions across 176 countries simultaneously. By bringing together four key indicators: internet access, life expectancy, healthcare spending, and infant mortality rate. It allows you to spot global patterns that wouldn't be visible from any single dataset alone. You might notice, for example, that high-income countries tend to cluster in the top-right of the scatterplot, with both high internet access and long life expectancies, while lower-income nations tell a very different story. The goal is to make these relationships easy to understand and explore.
 
----
 
 ## Data
 
@@ -34,9 +32,8 @@ Life Expectancy Dataset : https://ourworldindata.org/grapher/life-expectancy?tab
 Healthcare Spending Dataset : https://ourworldindata.org/grapher/annual-healthcare-expenditure-per-capita?time=2022
 Infant Mortality Rate Dataset : https://ourworldindata.org/grapher/infant-mortality?time=2022
 
----
 
-## Skethces used for visualization
+## Sketches used for visualization
 
 I did not use any sketches to draw out the way these visualizations would look on the screen but just had a general idea of wanting the world maps next to each other followed by the histograms and then followed by the scatterplot at the end.
 
@@ -44,13 +41,23 @@ I did not use any sketches to draw out the way these visualizations would look o
 
 -**Control Panel** - This panel at the top lets you select the attributes you want in all your various charts.
 
-- **Choropleth maps** — visualize the global distribution of any two attributes side by side
-- **Histograms** — see how countries are distributed across each attribute's range
-- **2D Scatterplot** — compare any two attributes against each other
-- **4D Bubble Chart** — encode all four attributes at once using X position, Y position, bubble size, and bubble color
-- **Brushing & linking** — click and drag on any chart or map to select countries; all other views highlight your selection in real time
+<img width="807" height="219" alt="Screenshot 2026-02-26 at 8 53 11 PM" src="https://github.com/user-attachments/assets/036df4a4-4536-4505-b764-2870f17ba300" />
 
----
+- **Choropleth maps** — visualize the global distribution of any two attributes side by side
+<img width="1304" height="548" alt="Screenshot 2026-02-26 at 8 53 15 PM" src="https://github.com/user-attachments/assets/a2e449c8-4faf-41c8-a066-9aa02f86c980" />
+
+- **Histograms** — see how countries are distributed across each attribute's range
+<img width="1225" height="435" alt="Screenshot 2026-02-26 at 8 53 20 PM" src="https://github.com/user-attachments/assets/7620497c-19e6-4f27-acd1-3e79ce03d69b" />
+
+- **2D Scatterplot** — compare any two attributes against each other
+<img width="828" height="282" alt="Screenshot 2026-02-26 at 8 58 44 PM" src="https://github.com/user-attachments/assets/bcdd610f-4bab-4b30-8b5f-7cf497e6003c" />
+
+- **4D Bubble Chart** — encode all four attributes at once using X position, Y position, bubble size, and bubble color
+<img width="723" height="280" alt="Screenshot 2026-02-26 at 8 53 40 PM" src="https://github.com/user-attachments/assets/30df1e6c-e2e4-4993-a50b-9ddc9106a82a" />
+
+- **Brushing & linking** — click and drag on any chart or map to select countries; all other views highlight your selection in real time
+<img width="596" height="533" alt="Screenshot 2026-02-26 at 8 53 36 PM" src="https://github.com/user-attachments/assets/cbacf13a-2bbd-4709-97da-4271e8a64686" />
+
 
 ## What does this application enables you to discover?
 
@@ -60,7 +67,6 @@ Higher life expectancy is directly related to higher internet share , higher hea
 
 An interesting thing to note is that United States spends dramatically more per capita on healthcare than any other country in the dataset, yet countries like Norway, Switzerland, and Japan achieve equal or superior life expectancy at a fraction of the cost. When comparing Healthcare Spending vs Life Expectancy on the scatterplot, the US emerges as a notable outlier—positioned far to the right (highest spending) but not at the top (life expectancy). This suggests that higher healthcare spending alone does not guarantee better health outcomes.
 
---
 
 ## Challenges faced and future work
 
@@ -68,13 +74,11 @@ Figuring out the choropleth maps and the brushing was definitely the toughest pa
 
 Some future enhancements I want to incorporate is time linked data which would give the user the ability to scroll through various years and see how the data develops. I also want to incorporate dark mode since the interface looks cooler.
 
---
 
 ## Use of AI to build this project
 
 I used Claude Code to help me debug some of my code and also used it to help me code the choropleth maps and figure out why my scatterplot wasn't fitting within my window. I also used it a lot to figure out color schemes and how to get the control panel to look nice and uniform.
 
---
 
 ## Demo Video
 
