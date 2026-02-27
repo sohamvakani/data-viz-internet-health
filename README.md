@@ -36,7 +36,13 @@ Infant Mortality Rate Dataset : https://ourworldindata.org/grapher/infant-mortal
 
 ---
 
-## Features
+## Skethces used for visualization
+
+I did not use any sketches to draw out the way these visualizations would look on the screen but just had a general idea of wanting the world maps next to each other followed by the histograms and then followed by the scatterplot at the end.
+
+## Features and How to interact with the application.
+
+-**Control Panel** - This panel at the top lets you select the attributes you want in all your various charts.
 
 - **Choropleth maps** — visualize the global distribution of any two attributes side by side
 - **Histograms** — see how countries are distributed across each attribute's range
@@ -46,6 +52,36 @@ Infant Mortality Rate Dataset : https://ourworldindata.org/grapher/infant-mortal
 
 ---
 
+## What does this application enables you to discover?
+
+This application lets you discover various geographic patterns in the data as well as the data distribution and checking if the attributes are correlated. Based on my findings all the attributes are very closely positively or negatively related to each other.
+
+Higher life expectancy is directly related to higher internet share , higher healthcare spending leads to lower infant mortality rate which can be seen in the scatterplot in the application.
+
+An interesting thing to note is that United States spends dramatically more per capita on healthcare than any other country in the dataset, yet countries like Norway, Switzerland, and Japan achieve equal or superior life expectancy at a fraction of the cost. When comparing Healthcare Spending vs Life Expectancy on the scatterplot, the US emerges as a notable outlier—positioned far to the right (highest spending) but not at the top (life expectancy). This suggests that higher healthcare spending alone does not guarantee better health outcomes.
+
+--
+
+## Challenges faced and future work
+
+Figuring out the choropleth maps and the brushing was definitely the toughest part of this project but with the help of documentation and looking at some examples of similar projects on Github I was able to work through them
+
+Some future enhancements I want to incorporate is time linked data which would give the user the ability to scroll through various years and see how the data develops. I also want to incorporate dark mode since the interface looks cooler.
+
+--
+
+## Use of AI to build this project
+
+I used Claude Code to help me debug some of my code and also used it to help me code the choropleth maps and figure out why my scatterplot wasn't fitting within my window. I also used it a lot to figure out color schemes and how to get the control panel to look nice and uniform.
+
+--
+
+## Demo Video
+
+Please find my demo video here in my onedrive link:
+
+[Soham Data Viz Project 1 Demo Video](https://mailuc-my.sharepoint.com/:v:/g/personal/vakanisa_mail_uc_edu/IQAGYaR7GJHYSoOxxovQG2nfASV6OqVISV3D_hWIWP7Y8Ak?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=r9OzmB)
+
 ## Built With
 
 - [D3.js v7](https://d3js.org/)
@@ -53,5 +89,3 @@ Infant Mortality Rate Dataset : https://ourworldindata.org/grapher/infant-mortal
 - Vanilla HTML, CSS, JavaScript
 
 ---
-
-##PENDING 1 section on any sketches that you used to help design your visualization environment pending.
